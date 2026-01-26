@@ -1,15 +1,19 @@
-import { Text, View } from "react-native";
+import { Text, View } from 'react-native';
+import { useTranslation } from 'react-i18next';
+import '../src/i18n';
 
 export default function Index() {
+  const { t } = useTranslation();
+
   return (
     <View
       style={{
         flex: 1,
-        justifyContent: "center",
-        alignItems: "center",
+        justifyContent: 'center',
+        alignItems: 'center',
       }}
     >
-      <Text>Edit app/index.tsx to edit this screen.</Text>
+      <Text>{t('hello')}</Text>
     </View>
   );
 }

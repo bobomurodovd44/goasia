@@ -57,6 +57,34 @@ export default function TabsLayout() {
           ),
         }}
       />
+      <Tabs.Screen
+        name="drivers"
+        options={{
+          title: "Drivers",
+          href: "/drivers",
+          tabBarIcon: ({ focused, color }) => (
+            <Ionicons
+              name={focused ? "people" : "people-outline"}
+              size={26}
+              color={color}
+            />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="users"
+        options={{
+          title: "Users",
+          href: "/users",
+          tabBarIcon: ({ focused, color }) => (
+            <Ionicons
+              name={focused ? "person" : "person-outline"}
+              size={26}
+              color={color}
+            />
+          ),
+        }}
+      />
     </Tabs>
   );
 }

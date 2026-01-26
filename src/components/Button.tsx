@@ -2,8 +2,10 @@ import React from 'react';
 import { 
   Text, 
   Pressable, 
+  View,
   StyleSheet, 
   ActivityIndicator,
+  TextStyle,
 } from 'react-native';
 import { colors } from '../theme/colors';
 
@@ -13,6 +15,8 @@ interface ButtonProps {
   variant?: 'primary' | 'secondary';
   disabled?: boolean;
   loading?: boolean;
+  icon?: React.ReactNode;
+  textStyle?: TextStyle;
 }
 
 export default function Button({
@@ -21,6 +25,8 @@ export default function Button({
   variant = 'primary',
   disabled,
   loading,
+  icon,
+  textStyle,
 }: ButtonProps) {
   const isDisabled = disabled || loading;
 
@@ -56,7 +62,10 @@ export default function Button({
       {loading ? (
         <ActivityIndicator color={variant === 'primary' ? '#FFFFFF' : colors.textPrimary} />
       ) : (
-        <Text style={getTextStyle()}>{title}</Text>
+        <View style={styles.contentRow}>
+          {icon}
+          <Text style={[getTextStyle(), textStyle]}>{title}</Text>
+        </View>
       )}
     </Pressable>
   );
@@ -66,6 +75,11 @@ const styles = StyleSheet.create({
   button: {
     height: 52,
     borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  contentRow: {
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
   },

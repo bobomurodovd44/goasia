@@ -1,4 +1,21 @@
 {
   "hello": "Hello World",
-  "welcome": "Welcome to GoAsia"
+  "welcome": "Welcome to GoAsia",
+  "login": {
+    "continueWithGoogle": "Continue with Google",
+    "or": "OR",
+    "email": "Email",
+    "password": "Password",
+    "placeholderEmail": "Enter your email",
+    "placeholderPassword": "Enter your password",
+    "forgotPassword": "Forgot password?",
+    "login": "Login",
+    "noAccount": "Don't have an account?",
+    "signUp": "Sign up",
+    "validationEmail": "Please enter a valid email",
+    "successTitle": "Success",
+    "successMessage": "Logged in successfully!",
+    "forgotPasswordTitle": "Forgot Password",
+    "forgotPasswordMessage": "Reset password flow coming soon"
+  }
 }

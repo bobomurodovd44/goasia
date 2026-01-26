@@ -98,10 +98,10 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   label: {
-    fontSize: 14,
+    fontSize: 16,
     color: colors.textPrimary,
     marginBottom: 8,
-    fontWeight: '600',
+    fontWeight: '400',
   },
   pressableWrapper: {
     borderRadius: 12,

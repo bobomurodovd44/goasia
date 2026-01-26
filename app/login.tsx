@@ -12,6 +12,7 @@ import {
   Pressable,
 } from 'react-native';
 import { useTranslation } from 'react-i18next';
+import { router } from 'expo-router';
 import { AntDesign } from '@expo/vector-icons';
 import Input from '../src/components/Input';
 import Button from '../src/components/Button';
@@ -39,7 +40,7 @@ export default function Login() {
   };
 
   const handleGoogleSignIn = () => {
-    console.log('Google Sign-In pressed');
+    router.replace('/(tabs)');
   };
 
   const handleForgotPassword = () => {

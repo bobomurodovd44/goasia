@@ -12,6 +12,7 @@ import {
   Pressable,
 } from 'react-native';
 import { useTranslation } from 'react-i18next';
+import '../src/i18n';
 import PhoneInput from 'react-native-phone-number-input';
 import Input from '../src/components/Input';
 import Button from '../src/components/Button';

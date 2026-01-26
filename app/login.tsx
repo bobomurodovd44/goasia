@@ -14,6 +14,7 @@ import {
 import { useTranslation } from 'react-i18next';
 import { router } from 'expo-router';
 import { AntDesign } from '@expo/vector-icons';
+import '../src/i18n';
 import Input from '../src/components/Input';
 import Button from '../src/components/Button';
 import { colors } from '../src/theme/colors';

@@ -47,7 +47,9 @@ export default function Login() {
   };
 
   const handleSignUp = () => {
-    console.log('Navigate to Sign Up');
+    import('expo-router').then(({ router }) => {
+      router.push('/signup');
+    });
   };
 
   return (

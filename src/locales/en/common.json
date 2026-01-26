@@ -17,5 +17,23 @@
     "successMessage": "Logged in successfully!",
     "forgotPasswordTitle": "Forgot Password",
     "forgotPasswordMessage": "Reset password flow coming soon"
+  },
+  "signup": {
+    "fullName": "Full Name",
+    "phone": "Phone Number",
+    "placeholderFullName": "Enter your full name",
+    "placeholderPhone": "Enter your phone number",
+    "email": "Email",
+    "placeholderEmail": "Enter your email",
+    "password": "Password",
+    "placeholderPassword": "Enter your password",
+    "signUp": "Sign Up",
+    "haveAccount": "Have an account?",
+    "goToLogin": "Go to login",
+    "validationFullName": "Please enter your full name",
+    "validationPhone": "Please enter a valid phone number",
+    "validationEmail": "Please enter a valid email",
+    "successTitle": "Success",
+    "successMessage": "Account created successfully!"
   }
 }

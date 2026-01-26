@@ -1,0 +1,101 @@
+import React from 'react';
+import { 
+  Text, 
+  Pressable, 
+  StyleSheet, 
+  ActivityIndicator,
+} from 'react-native';
+import { colors } from '../theme/colors';
+
+interface ButtonProps {
+  title: string;
+  onPress: () => void;
+  variant?: 'primary' | 'secondary';
+  disabled?: boolean;
+  loading?: boolean;
+}
+
+export default function Button({
+  title,
+  onPress,
+  variant = 'primary',
+  disabled,
+  loading,
+}: ButtonProps) {
+  const isDisabled = disabled || loading;
+
+  const getButtonStyle = () => {
+    const baseStyle = styles.button;
+    const variantStyle = variant === 'primary' 
+      ? styles.primaryButton 
+      : styles.secondaryButton;
+    const disabledStyle = isDisabled ? styles.disabledButton : null;
+    
+    return StyleSheet.flatten([baseStyle, variantStyle, disabledStyle]);
+  };
+
+  const getTextStyle = () => {
+    const baseStyle = styles.buttonText;
+    const variantStyle = variant === 'primary'
+      ? styles.primaryText
+      : styles.secondaryText;
+    const disabledStyle = isDisabled ? styles.disabledText : null;
+    
+    return StyleSheet.flatten([baseStyle, variantStyle, disabledStyle]);
+  };
+
+  return (
+    <Pressable
+      style={({ pressed }) => {
+        const pressedStyle = pressed && !isDisabled ? styles.pressed : null;
+        return StyleSheet.flatten([getButtonStyle(), pressedStyle]);
+      }}
+      onPress={onPress}
+      disabled={isDisabled}
+    >
+      {loading ? (
+        <ActivityIndicator color={variant === 'primary' ? '#FFFFFF' : colors.textPrimary} />
+      ) : (
+        <Text style={getTextStyle()}>{title}</Text>
+      )}
+    </Pressable>
+  );
+}
+
+const styles = StyleSheet.create({
+  button: {
+    height: 52,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  primaryButton: {
+    backgroundColor: colors.primary,
+  },
+  secondaryButton: {
+    backgroundColor: colors.secondary,
+    borderWidth: 2,
+    borderColor: colors.border,
+  },
+  disabledButton: {
+    backgroundColor: colors.disabledBackground,
+    borderWidth: 2,
+    borderColor: colors.border,
+  },
+  pressed: {
+    opacity: 0.85,
+  },
+  buttonText: {
+    fontSize: 17,
+    fontWeight: '600',
+  },
+  primaryText: {
+    color: '#FFFFFF',
+  },
+  secondaryText: {
+    color: colors.textPrimary,
+  },
+  disabledText: {
+    color: colors.disabled,
+  },
+});

@@ -1,22 +1,23 @@
-import React, { useState } from 'react';
-import { 
-  View, 
-  StyleSheet, 
-  Alert, 
-  KeyboardAvoidingView, 
-  ScrollView, 
-  Platform, 
-  TouchableWithoutFeedback, 
-  Keyboard,
-  Text,
-  Pressable,
-} from 'react-native';
-import { useTranslation } from 'react-i18next';
-import { router } from 'expo-router';
 import { AntDesign } from '@expo/vector-icons';
-import '../src/i18n';
-import Input from '../src/components/Input';
+import { router } from 'expo-router';
+import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import {
+    Alert,
+    Keyboard,
+    KeyboardAvoidingView,
+    Platform,
+    Pressable,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TouchableWithoutFeedback,
+    View,
+} from 'react-native';
+import Animated, { FadeInDown } from 'react-native-reanimated';
 import Button from '../src/components/Button';
+import Input from '../src/components/Input';
+import '../src/i18n';
 import { colors } from '../src/theme/colors';
 
 export default function Login() {
@@ -33,10 +34,10 @@ export default function Login() {
     setTimeout(() => {
       setLoading(false);
       if (!email.includes('@')) {
-        setEmailError(t('login.validationEmail'));
+        setEmailError(t('login.validationEmail') || 'Invalid email');
         return;
       }
-      Alert.alert(t('login.successTitle'), t('login.successMessage'));
+      Alert.alert(t('login.successTitle') || 'Success', t('login.successMessage') || 'Logged in successfully');
     }, 1500);
   };
 
@@ -45,13 +46,11 @@ export default function Login() {
   };
 
   const handleForgotPassword = () => {
-    Alert.alert(t('login.forgotPasswordTitle'), t('login.forgotPasswordMessage'));
+    Alert.alert(t('login.forgotPasswordTitle') || 'Forgot Password', t('login.forgotPasswordMessage') || 'Reset link sent');
   };
 
   const handleSignUp = () => {
-    import('expo-router').then(({ router }) => {
-      router.push('/signup');
-    });
+    router.push('/signup');
   };
 
   return (
@@ -66,69 +65,83 @@ export default function Login() {
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
-          <View style={styles.googleButtonContainer}>
-            <Button
-              title={t('login.continueWithGoogle')}
-              onPress={handleGoogleSignIn}
-              variant="secondary"
-              icon={
-                <View style={styles.googleIconContainer}>
-                  <AntDesign name="google" size={24} color="#333333" />
-                </View>
-              }
-              textStyle={styles.googleButtonText}
+          <Animated.View entering={FadeInDown.delay(100).duration(500)}>
+            <View style={styles.googleButtonContainer}>
+              <Button
+                title={t('login.continueWithGoogle') || 'Continue with Google'}
+                onPress={handleGoogleSignIn}
+                variant="secondary"
+                icon={
+                  <View style={styles.googleIconContainer}>
+                    <AntDesign name="google" size={24} color="#333333" />
+                  </View>
+                }
+                textStyle={styles.googleButtonText}
+              />
+            </View>
+          </Animated.View>
+
+          <Animated.View entering={FadeInDown.delay(200).duration(500)}>
+            <View style={styles.dividerContainer}>
+              <View style={styles.dividerLine} />
+              <Text style={styles.dividerText}>{t('login.or') || 'OR'}</Text>
+              <View style={styles.dividerLine} />
+            </View>
+          </Animated.View>
+
+          <Animated.View entering={FadeInDown.delay(300).duration(500)}>
+            <Input
+              label={t('login.email')}
+              value={email}
+              onChangeText={(text) => {
+                setEmail(text);
+                setEmailError('');
+              }}
+              placeholder={t('login.placeholderEmail')}
+              keyboardType="email-address"
+              autoCapitalize="none"
+              error={emailError}
             />
-          </View>
-
-          <View style={styles.dividerContainer}>
-            <View style={styles.dividerLine} />
-            <Text style={styles.dividerText}>{t('login.or')}</Text>
-            <View style={styles.dividerLine} />
-          </View>
-
-          <Input
-            label={t('login.email')}
-            value={email}
-            onChangeText={(text) => {
-              setEmail(text);
-              setEmailError('');
-            }}
-            placeholder={t('login.placeholderEmail')}
-            keyboardType="email-address"
-            autoCapitalize="none"
-            error={emailError}
-          />
+          </Animated.View>
           
-          <Input
-            label={t('login.password')}
-            value={password}
-            onChangeText={setPassword}
-            placeholder={t('login.placeholderPassword')}
-            secureTextEntry
-          />
-
-          <Pressable 
-            onPress={handleForgotPassword}
-            style={styles.forgotPasswordContainer}
-          >
-            <Text style={styles.forgotPasswordText}>{t('login.forgotPassword')}</Text>
-          </Pressable>
-
-          <View style={styles.buttonContainer}>
-            <Button
-              title={t('login.login')}
-              onPress={handleLogin}
-              disabled={!isFormValid}
-              loading={loading}
+          <Animated.View entering={FadeInDown.delay(400).duration(500)}>
+            <Input
+              label={t('login.password')}
+              value={password}
+              onChangeText={setPassword}
+              placeholder={t('login.placeholderPassword')}
+              secureTextEntry
             />
-          </View>
+          </Animated.View>
 
-          <View style={styles.signUpContainer}>
-            <Text style={styles.signUpText}>{t('login.noAccount')} </Text>
-            <Pressable onPress={handleSignUp}>
-              <Text style={styles.signUpLink}>{t('login.signUp')}</Text>
+          <Animated.View entering={FadeInDown.delay(450).duration(500)}>
+            <Pressable 
+              onPress={handleForgotPassword}
+              style={styles.forgotPasswordContainer}
+            >
+              <Text style={styles.forgotPasswordText}>{t('login.forgotPassword') || 'Forgot password?'}</Text>
             </Pressable>
-          </View>
+          </Animated.View>
+
+          <Animated.View entering={FadeInDown.delay(500).duration(500)}>
+            <View style={styles.buttonContainer}>
+              <Button
+                title={t('login.login') || 'Log In'}
+                onPress={handleLogin}
+                disabled={!isFormValid}
+                loading={loading}
+              />
+            </View>
+          </Animated.View>
+
+          <Animated.View entering={FadeInDown.delay(600).duration(500)}>
+            <View style={styles.signUpContainer}>
+              <Text style={styles.signUpText}>{t('login.noAccount') || "Don't have an account?"} </Text>
+              <Pressable onPress={handleSignUp}>
+                <Text style={styles.signUpLink}>{t('login.signUp') || 'Sign Up'}</Text>
+              </Pressable>
+            </View>
+          </Animated.View>
         </ScrollView>
       </TouchableWithoutFeedback>
     </KeyboardAvoidingView>

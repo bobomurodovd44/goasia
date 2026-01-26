@@ -1,5 +1,6 @@
-import { Text, View } from 'react-native';
+import { Text, View, Pressable } from 'react-native';
 import { useTranslation } from 'react-i18next';
+import { router } from 'expo-router';
 import '../src/i18n';
 
 export default function Index() {
@@ -14,6 +15,12 @@ export default function Index() {
       }}
     >
       <Text>{t('hello')}</Text>
+      <Pressable
+        onPress={() => router.push('/login')}
+        style={{ marginTop: 20, padding: 10 }}
+      >
+        <Text>Go to Login</Text>
+      </Pressable>
     </View>
   );
 }

@@ -6,7 +6,9 @@ import {
   StyleSheet, 
   TextInputProps,
   Pressable,
+  GestureResponderEvent,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../theme/colors';
 
 interface InputProps extends TextInputProps {
@@ -32,12 +34,18 @@ export default function Input({
   ...props
 }: InputProps) {
   const [focused, setFocused] = useState(false);
+  const [isPasswordVisible, setIsPasswordVisible] = useState(false);
   const inputRef = useRef<TextInput>(null);
 
   const handlePress = () => {
     if (!disabled) {
       inputRef.current?.focus();
     }
+  };
+
+  const togglePasswordVisibility = (e: GestureResponderEvent) => {
+    e.stopPropagation();
+    setIsPasswordVisible(!isPasswordVisible);
   };
 
   const getBorderColor = () => {
@@ -71,7 +79,7 @@ export default function Input({
             value={value}
             onChangeText={onChangeText}
             placeholder={placeholder}
-            secureTextEntry={secureTextEntry}
+            secureTextEntry={secureTextEntry && !isPasswordVisible}
             keyboardType={keyboardType}
             autoCapitalize={autoCapitalize}
             onFocus={(e) => {
@@ -86,6 +94,19 @@ export default function Input({
             placeholderTextColor={colors.textSecondary}
             {...props}
           />
+          {secureTextEntry && (
+            <Pressable 
+              onPress={togglePasswordVisibility}
+              style={styles.toggleIcon}
+              hitSlop={8}
+            >
+              <Ionicons 
+                name={isPasswordVisible ? 'eye-off' : 'eye'} 
+                size={20} 
+                color={colors.textSecondary} 
+              />
+            </Pressable>
+          )}
         </View>
       </Pressable>
       {error && <Text style={styles.error}>{error}</Text>}
@@ -114,8 +135,17 @@ const styles = StyleSheet.create({
   input: {
     paddingHorizontal: 16,
     paddingVertical: 14,
+    paddingRight: 40,
     fontSize: 16,
     color: colors.textPrimary,
+  },
+  toggleIcon: {
+    position: 'absolute',
+    right: 12,
+    top: 0,
+    bottom: 0,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   error: {
     fontSize: 13,

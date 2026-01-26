@@ -1,11 +1,13 @@
 import React from 'react';
-import { 
-  Text, 
-  Pressable, 
-  View,
-  StyleSheet, 
-  ActivityIndicator,
-  TextStyle,
+import {
+    ActivityIndicator,
+    Pressable,
+    StyleProp,
+    StyleSheet,
+    Text,
+    TextStyle,
+    View,
+    ViewStyle,
 } from 'react-native';
 import { colors } from '../theme/colors';
 
@@ -17,6 +19,7 @@ interface ButtonProps {
   loading?: boolean;
   icon?: React.ReactNode;
   textStyle?: TextStyle;
+  style?: StyleProp<ViewStyle>;
 }
 
 export default function Button({
@@ -27,6 +30,7 @@ export default function Button({
   loading,
   icon,
   textStyle,
+  style,
 }: ButtonProps) {
   const isDisabled = disabled || loading;
 
@@ -54,7 +58,7 @@ export default function Button({
     <Pressable
       style={({ pressed }) => {
         const pressedStyle = pressed && !isDisabled ? styles.pressed : null;
-        return StyleSheet.flatten([getButtonStyle(), pressedStyle]);
+        return StyleSheet.flatten([getButtonStyle(), style, pressedStyle]);
       }}
       onPress={onPress}
       disabled={isDisabled}

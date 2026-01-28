@@ -2,8 +2,9 @@ import { useEffect, useCallback, useState } from 'react';
 import { Stack, useRouter, usePathname } from "expo-router";
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from "react-native-safe-area-context";
-import { ActivityIndicator, StyleSheet, View, Text } from "react-native";
+import { ActivityIndicator, StyleSheet, View, Text, Alert } from "react-native";
 import { AuthProvider, useAuth } from "../src/contexts/AuthContext";
+import { useSignupWizard } from "../src/store/signupWizard";
 
 const PUBLIC_ROUTES = ['/login', '/signup', '/company-form'];
 
@@ -11,35 +12,37 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isLoading } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
+  const signupStore = useSignupWizard();
 
   const isPublicRoute = PUBLIC_ROUTES.includes(pathname);
   const isRootPath = pathname === '/';
+  const isCompanyForm = pathname === '/company-form';
 
   useEffect(() => {
     if (isLoading) return;
 
-    console.log('[AuthGuard] checkAuth - isLoading:', isLoading, 'isAuthenticated:', isAuthenticated, 'pathname:', pathname);
-
     if (isRootPath && !isAuthenticated) {
-      console.log('[AuthGuard] Root path, not authenticated - redirecting to login');
       router.replace('/login');
       return;
     }
 
     if (!isAuthenticated && !isPublicRoute) {
-      console.log('[AuthGuard] Not authenticated, not public route - redirecting to login');
       router.replace('/login');
       return;
     }
 
-    if (isAuthenticated && isPublicRoute && pathname !== '/company-form') {
-      console.log('[AuthGuard] Authenticated, public route - redirecting to tabs');
+    if (isAuthenticated && isPublicRoute && !isCompanyForm) {
       router.replace('/(tabs)');
       return;
     }
 
-    console.log('[AuthGuard] Rendering route:', pathname);
-  }, [isAuthenticated, isLoading, pathname, router, isPublicRoute, isRootPath]);
+    if (isAuthenticated && isCompanyForm) {
+      if (!signupStore.step1Completed) {
+        router.replace('/signup');
+        return;
+      }
+    }
+  }, [isAuthenticated, isLoading, pathname, router, isPublicRoute, isRootPath, isCompanyForm, signupStore.step1Completed]);
 
   if (isLoading && !isPublicRoute) {
     return (

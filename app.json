@@ -45,8 +45,8 @@
       "reactCompiler": true
     },
     "extra": {
-      "EXPO_PUBLIC_API_URL": "https://7b7ff1664b55.ngrok-free.app",
-      "EXPO_PUBLIC_SOCKET_URL": "https://7b7ff1664b55.ngrok-free.app",
+      "EXPO_PUBLIC_API_URL": "https://e7da28c1b464.ngrok-free.app",
+      "EXPO_PUBLIC_SOCKET_URL": "https://e7da28c1b464.ngrok-free.app",
       "EXPO_PUBLIC_FIREBASE_API_KEY": "AIzaSyCUgSAP5FwuVkiAcTRIirWd1hXbgxguX_Y",
       "EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN": "synclab-dev.firebaseapp.com",
       "EXPO_PUBLIC_FIREBASE_PROJECT_ID": "synclab-dev",

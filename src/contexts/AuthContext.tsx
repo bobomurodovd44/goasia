@@ -20,6 +20,7 @@ interface AuthContextType {
   login: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
   reauthenticate: () => Promise<void>;
+  setUser: (user: User) => void;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -90,6 +91,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
       const result = await feathersClient.reAuthenticate();
       setUser(result.user as User);
+      setIsLoading(false);
     } catch (error: any) {
       console.error('[Auth] Login error:', error);
       setIsLoading(false);
@@ -108,6 +110,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   }, []);
 
+  const updateUser = useCallback((user: User) => {
+    setUser(user);
+  }, []);
+
   const value: AuthContextType = {
     user,
     isAuthenticated: !!user,
@@ -115,6 +121,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     login,
     logout,
     reauthenticate,
+    setUser: updateUser,
   };
 
   return (

@@ -20,6 +20,7 @@ import Input from '../src/components/Input';
 import { useAuth } from '../src/contexts/AuthContext';
 import '../src/i18n';
 import { colors } from '../src/theme/colors';
+import { useSignupWizard } from '../src/store/signupWizard';
 
 export default function Login() {
   const { t } = useTranslation();
@@ -62,7 +63,7 @@ export default function Login() {
       
       let errorMessage = t('login.errorMessage') || 'Login failed. Please try again.';
       
-      if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password') {
+      if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
         errorMessage = t('login.invalidCredentials') || 'Invalid email or password';
       } else if (error.code === 'auth/invalid-email') {
         errorMessage = t('login.invalidEmail') || 'Invalid email address';
@@ -89,6 +90,7 @@ export default function Login() {
   };
 
   const handleSignUp = () => {
+    useSignupWizard.getState().resetWizard();
     router.push('/signup');
   };
 

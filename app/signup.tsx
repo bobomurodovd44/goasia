@@ -22,6 +22,16 @@ import Button from '../src/components/Button';
 import Input from '../src/components/Input';
 import '../src/i18n';
 import { colors } from '../src/theme/colors';
+import { useSignupWizard } from '../src/store/signupWizard';
+
+function isValidEmail(email: string): boolean {
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  return emailRegex.test(email);
+}
+
+function isValidPassword(password: string): boolean {
+  return password.length >= 6;
+}
 
 export default function SignUp() {
   const { t } = useTranslation();
@@ -29,7 +39,6 @@ export default function SignUp() {
   const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [loading, setLoading] = useState(false);
   const [phoneFocused, setPhoneFocused] = useState(false);
   const [errors, setErrors] = useState<{
     fullName?: string;
@@ -39,44 +48,55 @@ export default function SignUp() {
 
   const phoneInputRef = useRef<PhoneInput>(null);
 
+  const store = useSignupWizard();
+
   const isFormValid = fullName.length > 0 && phone.length > 0 && email.length > 0 && password.length > 0;
 
-  const handleSignUp = () => {
-    setLoading(true);
-    setErrors({});
-
-    setTimeout(() => {
-      setLoading(false);
-      const newErrors: typeof errors = {};
-
-      if (fullName.length < 2) {
-        newErrors.fullName = t('signup.validationFullName') || 'Full name is too short';
-      }
-
-      const checkPhone = phoneInputRef.current?.isValidNumber(phone);
-      if (!checkPhone) {
-        newErrors.phone = t('signup.validationPhone') || 'Invalid phone number';
-      }
-
-      if (!email.includes('@')) {
-        newErrors.email = t('signup.validationEmail') || 'Invalid email address';
-      }
-
-      if (Object.keys(newErrors).length > 0) {
-        setErrors(newErrors);
-        return;
-      }
-
-      Alert.alert(t('signup.successTitle') || 'Success', t('signup.successMessage') || 'Account created successfully');
-    }, 1500);
-  };
-
   const handleGoToLogin = () => {
+    store.resetWizard();
     router.replace('/login');
   };
 
   const handleGoogleSignIn = () => {
     router.replace('/(tabs)');
+  };
+
+  const handleNext = async () => {
+    setErrors({});
+
+    const newErrors: typeof errors = {};
+    const nameParts = fullName.trim().split(/\s+/);
+    const firstName = nameParts[0];
+    const lastName = nameParts.slice(1).join(' ') || firstName;
+
+    if (fullName.length < 2) {
+      newErrors.fullName = t('signup.validationFullName') || 'Full name is too short';
+    }
+
+    const checkPhone = phoneInputRef.current?.isValidNumber(phone);
+    if (!checkPhone) {
+      newErrors.phone = t('signup.validationPhone') || 'Invalid phone number';
+    }
+
+    if (!isValidEmail(email)) {
+      newErrors.email = 'Please enter a valid email address';
+    }
+
+    if (!isValidPassword(password)) {
+      setErrors({ ...newErrors, password: 'Password must be at least 6 characters' });
+      return;
+    }
+
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
+      return;
+    }
+
+    store.setCredentials(email, password);
+    store.setPersonalInfo(firstName, lastName, phone);
+    store.completeStep1();
+
+    router.push('/company-form');
   };
 
   const getPhoneBorderColor = () => {
@@ -187,18 +207,23 @@ export default function SignUp() {
               <Input
                 label={t('signup.password')}
                 value={password}
-                onChangeText={setPassword}
+                onChangeText={(text) => {
+                  setPassword(text);
+                  if (text.length >= 6) {
+                    setErrors(prev => ({ ...prev, password: undefined }));
+                  }
+                }}
                 placeholder={t('signup.placeholderPassword')}
                 secureTextEntry
+                error={errors.password}
               />
             </Animated.View>
 
             <Animated.View entering={FadeInDown.delay(700).duration(500)} style={styles.buttonContainer}>
               <Button
-                title={t('signup.signUp')}
-                onPress={handleSignUp}
+                title="Next"
+                onPress={handleNext}
                 disabled={!isFormValid}
-                loading={loading}
               />
             </Animated.View>
 

@@ -11,6 +11,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { router, usePathname } from 'expo-router';
 import Input from '../src/components/Input';
 import Button from '../src/components/Button';
 import Toggle from '../src/components/Toggle';
@@ -20,11 +21,18 @@ import { useLocation } from '../src/hooks/useLocation';
 import { Address } from '../src/types/address';
 import '../src/i18n';
 import { colors } from '../src/theme/colors';
+import { useSignupWizard } from '../src/store/signupWizard';
+import { signupApi } from '../src/services/signupApi';
+import { useAuth } from '../src/contexts/AuthContext';
 
 type CompanyType = 'llc' | 'individual';
 
 export default function CompanyForm() {
   const { t } = useTranslation();
+  const pathname = usePathname();
+  const store = useSignupWizard();
+  const { setUser } = useAuth();
+  
   const {
     fetchCurrentLocation,
     loading: locationLoading,
@@ -40,6 +48,7 @@ export default function CompanyForm() {
   const [selectedAddress, setSelectedAddress] = useState<Address | null>(null);
   const [showMapModal, setShowMapModal] = useState(false);
   const [formLoading, setFormLoading] = useState(false);
+  const [isInitialized, setIsInitialized] = useState(false);
 
   const toggleOptions = [
     { label: 'LLC', value: 'llc' },
@@ -63,6 +72,52 @@ export default function CompanyForm() {
     }
   }, [initialLocation, initialAddress]);
 
+  useEffect(() => {
+    const checkStep1Completion = () => {
+      const state = store;
+      
+      if (!state.step1Completed || !state.email || !state.password) {
+        Alert.alert(
+          'Incomplete Registration',
+          'Please complete Step 1 first to create your account.',
+          [{ 
+            text: 'OK', 
+            onPress: () => {
+              store.resetWizard();
+              router.replace('/signup');
+            }
+          }]
+        );
+        return false;
+      }
+      
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!state.email || !emailRegex.test(state.email)) {
+        store.resetWizard();
+        router.replace('/signup');
+        return false;
+      }
+      
+      if (!state.password || state.password.length < 6) {
+        store.resetWizard();
+        router.replace('/signup');
+        return false;
+      }
+      
+      return true;
+    };
+
+    if (pathname === '/company-form' && !isInitialized) {
+      const isValid = checkStep1Completion();
+      setIsInitialized(true);
+      
+      if (isValid) {
+        setCompanyName('');
+        setCompanyType('llc');
+      }
+    }
+  }, [pathname, store, isInitialized]);
+
   const handleLocationSelect = (
     location: { latitude: number; longitude: number },
     address: Address
@@ -74,37 +129,65 @@ export default function CompanyForm() {
 
   const handleSubmit = async () => {
     if (!companyName.trim()) {
-      Alert.alert('Validation', 'Please enter company name');
+      Alert.alert('Validation', 'Please enter your company name');
       return;
     }
     if (!selectedLocation || !selectedAddress) {
-      Alert.alert('Validation', 'Please select a location');
+      Alert.alert('Validation', 'Please select your company location');
       return;
     }
 
     setFormLoading(true);
 
-    await new Promise((resolve) => setTimeout(resolve, 1000));
+    try {
+      const result = await signupApi.submitRegistration({
+        email: store.email!,
+        password: store.password!,
+        firstName: store.firstName,
+        lastName: store.lastName,
+        phone: store.phone,
+        companyData: {
+          companyName: companyName.trim(),
+          companyType,
+          location: selectedLocation,
+          address: selectedAddress,
+        },
+      });
 
-    const formData = {
-      companyName: companyName.trim(),
-      companyType,
-      location: selectedLocation,
-      address: selectedAddress,
-    };
+      setUser(result.user as any);
+      store.resetWizard();
 
-    console.log('Company Form Data:', JSON.stringify(formData, null, 2));
+      Alert.alert(
+        'Success',
+        'Your account has been created successfully!',
+        [{ text: 'Continue', onPress: () => router.replace('/(tabs)') }]
+      );
+    } catch (error: any) {
+      Alert.alert(
+        'Registration Failed',
+        error.message || 'Unable to create your account. Please try again.',
+        [{ text: 'Retry' }, { text: 'Cancel', style: 'cancel' }]
+      );
+    } finally {
+      setFormLoading(false);
+    }
+  };
 
-    setFormLoading(false);
-
-    Alert.alert('Success', 'Company data logged to console', [
-      { text: 'OK', onPress: () => console.log('Form submitted') },
-    ]);
+  const handleBack = () => {
+    router.back();
   };
 
   const addressDisplayText = selectedAddress
     ? `${selectedAddress.city}${selectedAddress.city && selectedAddress.country ? ', ' : ''}${selectedAddress.country}`
     : undefined;
+
+  if (!store.step1Completed) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color={colors.primary} />
+      </View>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -118,10 +201,20 @@ export default function CompanyForm() {
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
-          <Text style={styles.title}>Company Information</Text>
-          <Text style={styles.subtitle}>
-            Please fill in your company details
-          </Text>
+          <View style={styles.header}>
+            <Text style={styles.stepIndicator}>Step 2 of 2</Text>
+            <Text style={styles.title}>Company Information</Text>
+            <Text style={styles.subtitle}>
+              Complete your company details to finish registration
+            </Text>
+          </View>
+
+          <Input
+            label="Email"
+            value={store.email || ''}
+            disabled={true}
+            placeholder="Email"
+          />
 
           <Input
             label={t('companyForm.companyNameLabel') || 'Company Name'}
@@ -152,7 +245,15 @@ export default function CompanyForm() {
 
           <View style={styles.buttonContainer}>
             <Button
-              title={t('companyForm.submitButton') || 'Save'}
+              title="Back"
+              onPress={handleBack}
+              variant="secondary"
+            />
+          </View>
+
+          <View style={styles.submitButtonContainer}>
+            <Button
+              title="Create Account"
               onPress={handleSubmit}
               disabled={!companyName.trim() || !selectedLocation || !selectedAddress}
               loading={formLoading}
@@ -188,6 +289,17 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     paddingVertical: 40,
   },
+  header: {
+    marginBottom: 24,
+  },
+  stepIndicator: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: colors.primary,
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+    marginBottom: 4,
+  },
   title: {
     fontSize: 28,
     fontWeight: '800',
@@ -198,7 +310,6 @@ const styles = StyleSheet.create({
   subtitle: {
     fontSize: 14,
     color: colors.textSecondary,
-    marginBottom: 32,
   },
   toggleContainer: {
     marginBottom: 24,
@@ -211,5 +322,14 @@ const styles = StyleSheet.create({
   },
   buttonContainer: {
     marginTop: 16,
+  },
+  submitButtonContainer: {
+    marginTop: 12,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: colors.background,
   },
 });

@@ -42,5 +42,22 @@
     "validationEmail": "Please enter a valid email",
     "successTitle": "Success",
     "successMessage": "Account created successfully!"
+  },
+  "companyForm": {
+    "title": "Company Information",
+    "subtitle": "Please fill in your company details",
+    "companyNameLabel": "Company Name",
+    "companyNamePlaceholder": "Enter company name",
+    "companyTypeLabel": "Company Type",
+    "addressLabel": "Address",
+    "addressPlaceholder": "Select company address",
+    "selectAddress": "Select Address",
+    "searchPlaceholder": "Search for a place...",
+    "useMyLocation": "Use My Location",
+    "done": "Done",
+    "cancel": "Cancel",
+    "fetchingLocation": "Getting your location...",
+    "noAddressSelected": "No address selected",
+    "submitButton": "Save"
   }
 }

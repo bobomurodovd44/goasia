@@ -1,25 +1,24 @@
 import { useEffect, useCallback, useState } from 'react';
 import { Stack, useRouter, usePathname } from "expo-router";
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaProvider } from "react-native-safe-area-context";
 import { ActivityIndicator, StyleSheet, View, Text } from "react-native";
 import { AuthProvider, useAuth } from "../src/contexts/AuthContext";
 
-const PUBLIC_ROUTES = ['/login', '/signup'];
+const PUBLIC_ROUTES = ['/login', '/signup', '/company-form'];
 
 function AuthGuard({ children }: { children: React.ReactNode }) {
-  const { isAuthenticated, isLoading, reauthenticate } = useAuth();
+  const { isAuthenticated, isLoading } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
-  const [authChecked, setAuthChecked] = useState(false);
 
-  const checkAuth = useCallback(async () => {
+  const isPublicRoute = PUBLIC_ROUTES.includes(pathname);
+  const isRootPath = pathname === '/';
+
+  useEffect(() => {
     if (isLoading) return;
 
     console.log('[AuthGuard] checkAuth - isLoading:', isLoading, 'isAuthenticated:', isAuthenticated, 'pathname:', pathname);
-
-    const isPublicRoute = PUBLIC_ROUTES.includes(pathname);
-    const isRootPath = pathname === '/';
 
     if (isRootPath && !isAuthenticated) {
       console.log('[AuthGuard] Root path, not authenticated - redirecting to login');
@@ -33,34 +32,20 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
       return;
     }
 
-    if (isAuthenticated && isPublicRoute) {
+    if (isAuthenticated && isPublicRoute && pathname !== '/company-form') {
       console.log('[AuthGuard] Authenticated, public route - redirecting to tabs');
       router.replace('/(tabs)');
       return;
     }
 
-    setAuthChecked(true);
-    console.log('[AuthGuard] Auth check complete - rendering children');
-  }, [isAuthenticated, isLoading, pathname, router]);
+    console.log('[AuthGuard] Rendering route:', pathname);
+  }, [isAuthenticated, isLoading, pathname, router, isPublicRoute, isRootPath]);
 
-  useEffect(() => {
-    checkAuth();
-  }, [checkAuth]);
-
-  if (isLoading) {
+  if (isLoading && !isPublicRoute) {
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color="#2563EB" />
         <Text style={styles.loadingText}>Checking authentication...</Text>
-      </View>
-    );
-  }
-
-  if (!authChecked) {
-    return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#2563EB" />
-        <Text style={styles.loadingText}>Verifying session...</Text>
       </View>
     );
   }
@@ -82,6 +67,7 @@ export default function RootLayout() {
             >
               <Stack.Screen name="login" />
               <Stack.Screen name="signup" />
+              <Stack.Screen name="company-form" />
               <Stack.Screen name="(tabs)" />
             </Stack>
           </AuthGuard>

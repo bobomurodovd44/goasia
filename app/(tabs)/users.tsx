@@ -248,13 +248,21 @@ export default function Users() {
     <SafeAreaView style={styles.container} edges={["top"]}>
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Users</Text>
-        <Pressable
-          style={({ pressed }) => [styles.logoutButton, pressed && styles.logoutButtonPressed]}
-          onPress={handleLogout}
-        >
-          <Ionicons name="log-out-outline" size={20} color="#DC2626" />
-          <Text style={styles.logoutText}>Log Out</Text>
-        </Pressable>
+        <View style={styles.headerActions}>
+          <Pressable
+            style={styles.debugButton}
+            onPress={() => router.push('/company-form')}
+          >
+            <Ionicons name="business-outline" size={20} color="#2563EB" />
+          </Pressable>
+          <Pressable
+            style={({ pressed }) => [styles.logoutButton, pressed && styles.logoutButtonPressed]}
+            onPress={handleLogout}
+          >
+            <Ionicons name="log-out-outline" size={20} color="#DC2626" />
+            <Text style={styles.logoutText}>Log Out</Text>
+          </Pressable>
+        </View>
       </View>
       <FlatList
         data={DUMMY_USERS}
@@ -281,6 +289,16 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderBottomWidth: 1,
     borderBottomColor: '#E5E7EB',
+  },
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  debugButton: {
+    padding: 8,
+    backgroundColor: '#EFF6FF',
+    borderRadius: 8,
   },
   headerTitle: {
     fontSize: 24,

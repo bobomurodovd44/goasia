@@ -16,7 +16,14 @@
     "successTitle": "Success",
     "successMessage": "Logged in successfully!",
     "forgotPasswordTitle": "Forgot Password",
-    "forgotPasswordMessage": "Reset password flow coming soon"
+    "forgotPasswordMessage": "Reset password flow coming soon",
+    "errorTitle": "Login Failed",
+    "errorMessage": "Login failed. Please try again.",
+    "invalidCredentials": "Invalid email or password",
+    "invalidEmail": "Invalid email address",
+    "tooManyRequests": "Too many attempts. Please try again later.",
+    "wrongRole": "This account is not authorized for company login",
+    "comingSoon": "Coming Soon"
   },
   "signup": {
     "fullName": "Full Name",

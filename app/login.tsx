@@ -17,11 +17,13 @@ import {
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import Button from '../src/components/Button';
 import Input from '../src/components/Input';
+import { useAuth } from '../src/contexts/AuthContext';
 import '../src/i18n';
 import { colors } from '../src/theme/colors';
 
 export default function Login() {
   const { t } = useTranslation();
+  const { login } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [emailError, setEmailError] = useState('');
@@ -29,20 +31,51 @@ export default function Login() {
 
   const isFormValid = email.length > 0 && password.length > 0;
 
-  const handleLogin = () => {
+  const validateEmail = (email: string): boolean => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+  };
+
+  const handleLogin = async () => {
+    if (!validateEmail(email)) {
+      setEmailError(t('login.validationEmail') || 'Invalid email address');
+      return;
+    }
+
     setLoading(true);
-    setTimeout(() => {
-      setLoading(false);
-      if (!email.includes('@')) {
-        setEmailError(t('login.validationEmail') || 'Invalid email');
-        return;
+    setEmailError('');
+
+    try {
+      console.log('[Login] Attempting login for:', email);
+      await login(email, password);
+      console.log('[Login] Success, navigating to tabs...');
+    } catch (error: any) {
+      console.log('[Login] Error caught:', error);
+      console.log('[Login] Error code:', error.code);
+      console.log('[Login] Error message:', error.message);
+      
+      let errorMessage = t('login.errorMessage') || 'Login failed. Please try again.';
+      
+      if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password') {
+        errorMessage = t('login.invalidCredentials') || 'Invalid email or password';
+      } else if (error.code === 'auth/invalid-email') {
+        errorMessage = t('login.invalidEmail') || 'Invalid email address';
+      } else if (error.code === 'auth/too-many-requests') {
+        errorMessage = t('login.tooManyRequests') || 'Too many attempts. Please try again later.';
+      } else if (error.message?.includes('role')) {
+        errorMessage = t('login.wrongRole') || 'This account is not authorized for company login';
+      } else if (error.message) {
+        errorMessage = error.message;
       }
-      Alert.alert(t('login.successTitle') || 'Success', t('login.successMessage') || 'Logged in successfully');
-    }, 1500);
+
+      Alert.alert(t('login.errorTitle') || 'Login Failed', errorMessage);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleGoogleSignIn = () => {
-    router.replace('/(tabs)');
+    Alert.alert(t('login.comingSoon') || 'Coming Soon', 'Google Sign-In will be available soon.');
   };
 
   const handleForgotPassword = () => {

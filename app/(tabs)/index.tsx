@@ -1,6 +1,6 @@
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import {
     FlatList,
     Platform,
@@ -9,7 +9,6 @@ import {
     Text,
     View
 } from "react-native";
-import Animated, { FadeInDown } from "react-native-reanimated";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { colors } from "../../src/theme/colors";
 
@@ -48,60 +47,75 @@ const DUMMY_PENDING_ORDERS = [
 
 export default function PendingOrders() {
   const router = useRouter();
+  const [isLoading, setIsLoading] = useState(true);
 
-  const renderOrderCard = ({ item, index }: { item: any, index: number }) => (
-    <Animated.View entering={FadeInDown.delay(index * 80).duration(600)}>
-      <Pressable 
-        style={({ pressed }) => [
-          styles.card, 
-          pressed && styles.cardPressed,
-          index === 0 && styles.firstCard
-        ]}
-        onPress={() => router.push(`/order-details/${item.id}` as any)}
-      >
-        <View style={styles.cardHeader}>
-          <View style={styles.idContainer}>
-            <View style={styles.dot} />
-            <Text style={styles.orderIdText}>{item.id}</Text>
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setIsLoading(false);
+    }, 500);
+    return () => clearTimeout(timer);
+  }, []);
+
+  const renderOrderCard = ({ item }: { item: typeof DUMMY_PENDING_ORDERS[0] }) => (
+    <Pressable 
+      style={({ pressed }) => [
+        styles.card, 
+        pressed && styles.cardPressed,
+      ]}
+      onPress={() => router.push(`/order-details/${item.id}` as any)}
+    >
+      <View style={styles.cardHeader}>
+        <View style={styles.idContainer}>
+          <View style={styles.dot} />
+          <Text style={styles.orderIdText}>{item.id}</Text>
+        </View>
+        <View style={styles.timerBadge}>
+          <Ionicons name="flash" size={12} color="#F59E0B" />
+          <Text style={styles.timerText}>{item.timeLeft}</Text>
+        </View>
+      </View>
+
+      <View style={styles.routeSection}>
+        <View style={styles.routeIcons}>
+          <View style={styles.hollowDot} />
+          <View style={styles.routeLine} />
+          <Ionicons name="location" size={16} color={colors.primary} />
+        </View>
+        <View style={styles.routeDetails}>
+          <Text style={styles.locationText} numberOfLines={1}>{item.from}</Text>
+          <View style={styles.routeGap} />
+          <Text style={styles.locationText} numberOfLines={1}>{item.to}</Text>
+        </View>
+      </View>
+
+      <View style={styles.cardFooter}>
+        <View style={styles.tagGroup}>
+          <View style={styles.tag}>
+            <MaterialCommunityIcons name="car-back" size={14} color={colors.textSecondary} />
+            <Text style={styles.tagText}>{item.type}</Text>
           </View>
-          <View style={styles.timerBadge}>
-            <Ionicons name="flash" size={12} color="#F59E0B" />
-            <Text style={styles.timerText}>{item.timeLeft}</Text>
+          <View style={styles.tag}>
+            <Ionicons name="navigate-outline" size={14} color={colors.textSecondary} />
+            <Text style={styles.tagText}>{item.distance}</Text>
           </View>
         </View>
-
-        <View style={styles.routeSection}>
-          <View style={styles.routeIcons}>
-            <View style={styles.hollowDot} />
-            <View style={styles.routeLine} />
-            <Ionicons name="location" size={16} color={colors.primary} />
-          </View>
-          <View style={styles.routeDetails}>
-            <Text style={styles.locationText} numberOfLines={1}>{item.from}</Text>
-            <View style={styles.routeGap} />
-            <Text style={styles.locationText} numberOfLines={1}>{item.to}</Text>
-          </View>
+        <View style={styles.priceContainer}>
+          <Text style={styles.priceLabel}>Starting from</Text>
+          <Text style={styles.priceValue}>{item.priceRange.split(' - ')[0]}</Text>
         </View>
-
-        <View style={styles.cardFooter}>
-          <View style={styles.tagGroup}>
-            <View style={styles.tag}>
-              <MaterialCommunityIcons name="car-back" size={14} color={colors.textSecondary} />
-              <Text style={styles.tagText}>{item.type}</Text>
-            </View>
-            <View style={styles.tag}>
-              <Ionicons name="navigate-outline" size={14} color={colors.textSecondary} />
-              <Text style={styles.tagText}>{item.distance}</Text>
-            </View>
-          </View>
-          <View style={styles.priceContainer}>
-            <Text style={styles.priceLabel}>Starting from</Text>
-            <Text style={styles.priceValue}>{item.priceRange.split(' - ')[0]}</Text>
-          </View>
-        </View>
-      </Pressable>
-    </Animated.View>
+      </View>
+    </Pressable>
   );
+
+  if (isLoading) {
+    return (
+      <SafeAreaView style={styles.container} edges={["top"]}>
+        <View style={styles.loadingContainer}>
+          <Text style={styles.loadingText}>Loading orders...</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <View style={styles.container}>
@@ -136,10 +150,19 @@ export default function PendingOrders() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#F1F5F9", // Premium slate-ish background
+    backgroundColor: "#F1F5F9",
   },
   safeArea: {
     flex: 1,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    fontSize: 16,
+    color: '#6B7280',
   },
   listContent: {
     paddingHorizontal: 20,
@@ -180,9 +203,6 @@ const styles = StyleSheet.create({
         elevation: 2,
       },
     }),
-  },
-  firstCard: {
-    // Optional special styling for first card
   },
   cardPressed: {
     backgroundColor: "#F8FAFC",

@@ -107,13 +107,16 @@ function ErrorState({ message, onRetry }: { message: string; onRetry: () => void
   );
 }
 
-interface AddDriverModalProps {
+interface DriverModalProps {
   visible: boolean;
   onClose: () => void;
   onSuccess?: () => void;
+  driver?: Driver | null;
 }
 
-function AddDriverModal({ visible, onClose, onSuccess }: AddDriverModalProps) {
+function DriverModal({ visible, onClose, onSuccess, driver }: DriverModalProps) {
+  const isEditing = !!driver;
+
   const [isActive, setIsActive] = useState("active");
   const [formData, setFormData] = useState({
     firstName: "",
@@ -128,10 +131,93 @@ function AddDriverModal({ visible, onClose, onSuccess }: AddDriverModalProps) {
 
   const phoneInputRef = useRef<PhoneInput>(null);
 
+  // Populate form when editing existing driver
+  useEffect(() => {
+    if (driver) {
+      setFormData({
+        firstName: driver.firstName,
+        lastName: driver.lastName,
+        phone: driver.phone,
+        email: driver.email,
+      });
+      setIsActive(driver.isActive ? "active" : "inactive");
+
+      // Debug: log driver data to see what's available
+      console.log("Driver data for edit:", JSON.stringify(driver, null, 2));
+
+      // Show existing license images if available
+      // Check various possible field names for media data
+      const frontMedia = driver.licenseFront ||
+                         driver.licenseFrontUrl ||
+                         (typeof driver.licenseFrontId === 'object' ? driver.licenseFrontId?.url : null);
+      const backMedia = driver.licenseBack ||
+                        driver.licenseBackUrl ||
+                        (typeof driver.licenseBackId === 'object' ? driver.licenseBackId?.url : null);
+
+      console.log("Front media:", frontMedia);
+      console.log("Back media:", backMedia);
+
+      // Set front license
+      if (driver.licenseFrontUrl) {
+        setLicenseFront(driver.licenseFrontUrl);
+      } else if (typeof driver.licenseFrontId === 'object' && driver.licenseFrontId?.url) {
+        setLicenseFront(driver.licenseFrontId.url);
+      } else if (typeof driver.licenseFront === 'object' && driver.licenseFront?.url) {
+        setLicenseFront(driver.licenseFront.url);
+      } else if (driver.licenseFrontId && typeof driver.licenseFrontId === 'string') {
+        // ID only - construct URL (adjust based on your backend URL pattern)
+        setLicenseFront(`http://localhost:3000/media/${driver.licenseFrontId}`);
+      } else if (driver.licenseFront && typeof driver.licenseFront === 'string') {
+        setLicenseFront(driver.licenseFront);
+      } else {
+        setLicenseFront(null);
+      }
+
+      // Set back license
+      if (driver.licenseBackUrl) {
+        setLicenseBack(driver.licenseBackUrl);
+      } else if (typeof driver.licenseBackId === 'object' && driver.licenseBackId?.url) {
+        setLicenseBack(driver.licenseBackId.url);
+      } else if (typeof driver.licenseBack === 'object' && driver.licenseBack?.url) {
+        setLicenseBack(driver.licenseBack.url);
+      } else if (driver.licenseBackId && typeof driver.licenseBackId === 'string') {
+        // ID only - construct URL (adjust based on your backend URL pattern)
+        setLicenseBack(`http://localhost:3000/media/${driver.licenseBackId}`);
+      } else if (driver.licenseBack && typeof driver.licenseBack === 'string') {
+        setLicenseBack(driver.licenseBack);
+      } else {
+        setLicenseBack(null);
+      }
+    } else {
+      // Reset form for new driver
+      setFormData({
+        firstName: "",
+        lastName: "",
+        phone: "",
+        email: "",
+      });
+      setLicenseFront(null);
+      setLicenseBack(null);
+      setIsActive("active");
+    }
+  }, [driver]);
+
   // Validation helpers
   const isValidEmail = (email: string): boolean => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     return emailRegex.test(email);
+  };
+
+  // Simple phone validation for update mode: starts with + and at least 9 digits
+  const isValidPhoneSimple = (phone: string): boolean => {
+    if (!phone || phone.length < 10) return false;
+    const digitsOnly = phone.replace(/[^\d]/g, "");
+    return phone.startsWith("+") && digitsOnly.length >= 9;
+  };
+
+  // Phone validation for add mode (uses PhoneInput which handles formatting)
+  const isValidPhoneAdd = (phone: string): boolean => {
+    return phone.trim().length > 0;
   };
 
   const getPhoneBorderColor = () => {
@@ -143,7 +229,8 @@ function AddDriverModal({ visible, onClose, onSuccess }: AddDriverModalProps) {
     formData.firstName.trim().length > 0 &&
     formData.lastName.trim().length > 0 &&
     formData.phone.trim().length > 0 &&
-    isValidEmail(formData.email);
+    isValidEmail(formData.email) &&
+    (isEditing ? isValidPhoneSimple(formData.phone) : isValidPhoneAdd(formData.phone));
 
   const pickImage = async (side: "front" | "back") => {
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -162,18 +249,6 @@ function AddDriverModal({ visible, onClose, onSuccess }: AddDriverModalProps) {
     }
   };
 
-  const resetForm = () => {
-    setFormData({
-      firstName: "",
-      lastName: "",
-      phone: "",
-      email: "",
-    });
-    setLicenseFront(null);
-    setLicenseBack(null);
-    setIsActive("active");
-  };
-
   const handleSubmit = async () => {
     setLoading(true);
     try {
@@ -189,36 +264,47 @@ function AddDriverModal({ visible, onClose, onSuccess }: AddDriverModalProps) {
         return;
       }
 
-      // Upload license front
+      // Upload license front if changed
       let licenseFrontId: string | null = null;
-      if (licenseFront) {
+      if (licenseFront && !licenseFront.includes("http")) {
         licenseFrontId = await uploadFileMultipart(licenseFront, "image/jpeg");
       }
 
-      // Upload license back
+      // Upload license back if changed
       let licenseBackId: string | null = null;
-      if (licenseBack) {
+      if (licenseBack && !licenseBack.includes("http")) {
         licenseBackId = await uploadFileMultipart(licenseBack, "image/jpeg");
       }
 
-      // Create driver
-      await feathersClient.service("drivers").create({
-        firstName: formData.firstName,
-        lastName: formData.lastName,
-        phone: formData.phone,
-        email: formData.email,
-        isActive: isActive === "active",
-        licenseFrontId,
-        licenseBackId,
-      });
+      if (isEditing && driver?._id) {
+        // Update existing driver
+        await feathersClient.service("drivers").patch(driver._id, {
+          firstName: formData.firstName,
+          lastName: formData.lastName,
+          phone: formData.phone,
+          email: formData.email,
+          isActive: isActive === "active",
+          ...(licenseFrontId && { licenseFrontId }),
+          ...(licenseBackId && { licenseBackId }),
+        });
+      } else {
+        // Create new driver
+        await feathersClient.service("drivers").create({
+          firstName: formData.firstName,
+          lastName: formData.lastName,
+          phone: formData.phone,
+          email: formData.email,
+          isActive: isActive === "active",
+          licenseFrontId,
+          licenseBackId,
+        });
+      }
 
-      // Reset form and close modal
-      resetForm();
       onClose();
       onSuccess?.();
     } catch (error) {
-      console.error("Failed to create driver:", error);
-      Alert.alert("Error", "Failed to create driver. Please try again.");
+      console.error("Failed to save driver:", error);
+      Alert.alert("Error", `Failed to ${isEditing ? "update" : "create"} driver. Please try again.`);
     } finally {
       setLoading(false);
     }
@@ -250,7 +336,7 @@ function AddDriverModal({ visible, onClose, onSuccess }: AddDriverModalProps) {
                   color={loading ? colors.disabled : colors.textPrimary}
                 />
               </Pressable>
-              <Text style={styles.modalTitle}>Add Driver</Text>
+              <Text style={styles.modalTitle}>{isEditing ? "Update Driver" : "Add Driver"}</Text>
               <View style={styles.modalCloseButton} />
             </View>
 
@@ -305,40 +391,54 @@ function AddDriverModal({ visible, onClose, onSuccess }: AddDriverModalProps) {
               {/* Phone */}
               <View style={styles.formSection}>
                 <Text style={styles.sectionLabel}>Phone</Text>
-                <View
-                  style={[
-                    styles.phoneInputOuterContainer,
-                    {
-                      borderColor: getPhoneBorderColor(),
-                      opacity: loading ? 0.5 : 1,
-                    },
-                  ]}
-                >
-                  <View style={styles.phoneIconLeft}>
-                    <Ionicons name="call" size={18} color={colors.textSecondary} />
-                  </View>
-                  <TouchableWithoutFeedback
-                    onPress={() => !loading && setPhoneFocused(true)}
+                {isEditing ? (
+                  // Update mode: simple Input with validation
+                  <Input
+                    value={formData.phone}
+                    onChangeText={(text) =>
+                      setFormData((prev) => ({ ...prev, phone: text }))
+                    }
+                    placeholder="+998901234567"
+                    keyboardType="phone-pad"
                     disabled={loading}
+                  />
+                ) : (
+                  // Add mode: PhoneInput component
+                  <View
+                    style={[
+                      styles.phoneInputOuterContainer,
+                      {
+                        borderColor: getPhoneBorderColor(),
+                        opacity: loading ? 0.5 : 1,
+                      },
+                    ]}
                   >
-                    <View style={styles.phoneInputWrapper}>
-                      <PhoneInput
-                        ref={phoneInputRef}
-                        value={formData.phone}
-                        defaultCode="UZ"
-                        layout="first"
-                        onChangeText={(text) =>
-                          setFormData((prev) => ({ ...prev, phone: text }))
-                        }
-                        onFocus={() => setPhoneFocused(true)}
-                        onBlur={() => setPhoneFocused(false)}
-                        containerStyle={styles.phoneInput}
-                        textContainerStyle={styles.phoneTextInput}
-                        disabled={loading}
-                      />
+                    <View style={styles.phoneIconLeft}>
+                      <Ionicons name="call" size={18} color={colors.textSecondary} />
                     </View>
-                  </TouchableWithoutFeedback>
-                </View>
+                    <TouchableWithoutFeedback
+                      onPress={() => !loading && setPhoneFocused(true)}
+                      disabled={loading}
+                    >
+                      <View style={styles.phoneInputWrapper}>
+                        <PhoneInput
+                          ref={phoneInputRef}
+                          value={formData.phone}
+                          defaultCode="UZ"
+                          layout="first"
+                          onChangeText={(text) =>
+                            setFormData((prev) => ({ ...prev, phone: text }))
+                          }
+                          onFocus={() => setPhoneFocused(true)}
+                          onBlur={() => setPhoneFocused(false)}
+                          containerStyle={styles.phoneInput}
+                          textContainerStyle={styles.phoneTextInput}
+                          disabled={loading}
+                        />
+                      </View>
+                    </TouchableWithoutFeedback>
+                  </View>
+                )}
               </View>
 
               {/* Email */}
@@ -446,6 +546,7 @@ export default function Drivers() {
   const [error, setError] = useState<string | null>(null);
   const [skip, setSkip] = useState(0);
   const [showAddDriverModal, setShowAddDriverModal] = useState(false);
+  const [selectedDriver, setSelectedDriver] = useState<Driver | null>(null);
   const driversFetched = useRef(false);
 
   const fetchDrivers = useCallback(
@@ -558,6 +659,10 @@ export default function Drivers() {
     return (
       <Pressable
         style={({ pressed }) => [styles.card, pressed && styles.cardPressed]}
+        onPress={() => {
+          setSelectedDriver(item);
+          setShowAddDriverModal(true);
+        }}
       >
         <View style={styles.cardContent}>
           <View style={styles.thumbnailContainer}>
@@ -603,10 +708,17 @@ export default function Drivers() {
           <LoadingSkeleton />
           <LoadingSkeleton />
         </View>
-        <AddDriverModal
+        <DriverModal
           visible={showAddDriverModal}
-          onClose={() => setShowAddDriverModal(false)}
-          onSuccess={() => fetchDrivers(true)}
+          onClose={() => {
+            setShowAddDriverModal(false);
+            setSelectedDriver(null);
+          }}
+          onSuccess={() => {
+            fetchDrivers(true);
+            setSelectedDriver(null);
+          }}
+          driver={selectedDriver}
         />
       </SafeAreaView>
     );
@@ -648,10 +760,17 @@ export default function Drivers() {
         />
       )}
 
-      <AddDriverModal
+      <DriverModal
         visible={showAddDriverModal}
-        onClose={() => setShowAddDriverModal(false)}
-        onSuccess={() => fetchDrivers(true)}
+        onClose={() => {
+          setShowAddDriverModal(false);
+          setSelectedDriver(null);
+        }}
+        onSuccess={() => {
+          fetchDrivers(true);
+          setSelectedDriver(null);
+        }}
+        driver={selectedDriver}
       />
     </SafeAreaView>
   );

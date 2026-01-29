@@ -1,8 +1,9 @@
 import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
+  Alert,
   FlatList,
   Image,
   KeyboardAvoidingView,
@@ -13,14 +14,17 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  TouchableWithoutFeedback,
   View,
 } from "react-native";
+import PhoneInput from "react-native-phone-number-input";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Button from "../../src/components/Button";
 import Input from "../../src/components/Input";
 import Toggle from "../../src/components/Toggle";
 import { useAuth } from "../../src/contexts/AuthContext";
 import feathersClient from "../../src/services/feathersClient";
+import { uploadFileMultipart } from "../../src/services/handleMultipartUpload";
 import { colors } from "../../src/theme/colors";
 
 type Driver = {
@@ -106,9 +110,10 @@ function ErrorState({ message, onRetry }: { message: string; onRetry: () => void
 interface AddDriverModalProps {
   visible: boolean;
   onClose: () => void;
+  onSuccess?: () => void;
 }
 
-function AddDriverModal({ visible, onClose }: AddDriverModalProps) {
+function AddDriverModal({ visible, onClose, onSuccess }: AddDriverModalProps) {
   const [isActive, setIsActive] = useState("active");
   const [formData, setFormData] = useState({
     firstName: "",
@@ -119,6 +124,26 @@ function AddDriverModal({ visible, onClose }: AddDriverModalProps) {
   const [licenseFront, setLicenseFront] = useState<string | null>(null);
   const [licenseBack, setLicenseBack] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [phoneFocused, setPhoneFocused] = useState(false);
+
+  const phoneInputRef = useRef<PhoneInput>(null);
+
+  // Validation helpers
+  const isValidEmail = (email: string): boolean => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+  };
+
+  const getPhoneBorderColor = () => {
+    if (phoneFocused) return colors.focus;
+    return colors.border;
+  };
+
+  const isFormValid =
+    formData.firstName.trim().length > 0 &&
+    formData.lastName.trim().length > 0 &&
+    formData.phone.trim().length > 0 &&
+    isValidEmail(formData.email);
 
   const pickImage = async (side: "front" | "back") => {
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -137,15 +162,66 @@ function AddDriverModal({ visible, onClose }: AddDriverModalProps) {
     }
   };
 
-  const handleSubmit = () => {
-    // Just log for now - no actual API call
-    console.log("Submit driver:", {
-      ...formData,
-      isActive: isActive === "active",
-      licenseFront,
-      licenseBack,
+  const resetForm = () => {
+    setFormData({
+      firstName: "",
+      lastName: "",
+      phone: "",
+      email: "",
     });
-    onClose();
+    setLicenseFront(null);
+    setLicenseBack(null);
+    setIsActive("active");
+  };
+
+  const handleSubmit = async () => {
+    setLoading(true);
+    try {
+      // Validate required fields
+      if (
+        !formData.firstName ||
+        !formData.lastName ||
+        !formData.phone ||
+        !formData.email
+      ) {
+        Alert.alert("Error", "Please fill in all required fields");
+        setLoading(false);
+        return;
+      }
+
+      // Upload license front
+      let licenseFrontId: string | null = null;
+      if (licenseFront) {
+        licenseFrontId = await uploadFileMultipart(licenseFront, "image/jpeg");
+      }
+
+      // Upload license back
+      let licenseBackId: string | null = null;
+      if (licenseBack) {
+        licenseBackId = await uploadFileMultipart(licenseBack, "image/jpeg");
+      }
+
+      // Create driver
+      await feathersClient.service("drivers").create({
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+        phone: formData.phone,
+        email: formData.email,
+        isActive: isActive === "active",
+        licenseFrontId,
+        licenseBackId,
+      });
+
+      // Reset form and close modal
+      resetForm();
+      onClose();
+      onSuccess?.();
+    } catch (error) {
+      console.error("Failed to create driver:", error);
+      Alert.alert("Error", "Failed to create driver. Please try again.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -163,69 +239,106 @@ function AddDriverModal({ visible, onClose }: AddDriverModalProps) {
           <View style={styles.modalContent}>
             {/* Header */}
             <View style={styles.modalHeader}>
-              <Pressable style={styles.modalBackButton} onPress={onClose}>
-                <Ionicons name="chevron-back" size={24} color={colors.textPrimary} />
+              <Pressable
+                style={styles.modalBackButton}
+                onPress={onClose}
+                disabled={loading}
+              >
+                <Ionicons
+                  name="chevron-back"
+                  size={24}
+                  color={loading ? colors.disabled : colors.textPrimary}
+                />
               </Pressable>
               <Text style={styles.modalTitle}>Add Driver</Text>
               <View style={styles.modalCloseButton} />
             </View>
 
-            {/* Scrollable Form */}
+            {/* Form Content - Scrollable */}
             <ScrollView
-              style={styles.modalScroll}
+              style={styles.modalFormScroll}
               showsVerticalScrollIndicator={false}
               keyboardShouldPersistTaps="handled"
             >
-              {/* Active/Inactive Toggle */}
-              <View style={styles.formSection}>
-                <Text style={styles.sectionLabel}>Status</Text>
-                <Toggle
-                  options={[
-                    { label: "Active", value: "active" },
-                    { label: "Inactive", value: "inactive" },
-                  ]}
-                  selected={isActive}
-                  onSelect={setIsActive}
-                />
-              </View>
+              <View style={styles.modalFormContent}>
+                {/* Active/Inactive Toggle */}
+                <View style={styles.formSection}>
+                  <Text style={styles.sectionLabel}>Status</Text>
+                  <Toggle
+                    options={[
+                      { label: "Active", value: "active" },
+                      { label: "Inactive", value: "inactive" },
+                    ]}
+                    selected={isActive}
+                    onSelect={loading ? () => {} : setIsActive}
+                  />
+                </View>
 
-              {/* First Name */}
-              <View style={styles.formSection}>
-                <Input
-                  label="First Name"
-                  value={formData.firstName}
-                  onChangeText={(text) =>
-                    setFormData((prev) => ({ ...prev, firstName: text }))
-                  }
-                  placeholder="Enter first name"
-                  autoCapitalize="words"
-                />
-              </View>
+                {/* First Name */}
+                <View style={styles.formSection}>
+                  <Input
+                    label="First Name"
+                    value={formData.firstName}
+                    onChangeText={(text) =>
+                      setFormData((prev) => ({ ...prev, firstName: text }))
+                    }
+                    placeholder="Enter first name"
+                    autoCapitalize="words"
+                    disabled={loading}
+                  />
+                </View>
 
-              {/* Last Name */}
-              <View style={styles.formSection}>
-                <Input
-                  label="Last Name"
-                  value={formData.lastName}
-                  onChangeText={(text) =>
-                    setFormData((prev) => ({ ...prev, lastName: text }))
-                  }
-                  placeholder="Enter last name"
-                  autoCapitalize="words"
-                />
-              </View>
+                {/* Last Name */}
+                <View style={styles.formSection}>
+                  <Input
+                    label="Last Name"
+                    value={formData.lastName}
+                    onChangeText={(text) =>
+                      setFormData((prev) => ({ ...prev, lastName: text }))
+                    }
+                    placeholder="Enter last name"
+                    autoCapitalize="words"
+                    disabled={loading}
+                  />
+                </View>
 
               {/* Phone */}
               <View style={styles.formSection}>
-                <Input
-                  label="Phone"
-                  value={formData.phone}
-                  onChangeText={(text) =>
-                    setFormData((prev) => ({ ...prev, phone: text }))
-                  }
-                  placeholder="Enter phone number"
-                  keyboardType="phone-pad"
-                />
+                <Text style={styles.sectionLabel}>Phone</Text>
+                <View
+                  style={[
+                    styles.phoneInputOuterContainer,
+                    {
+                      borderColor: getPhoneBorderColor(),
+                      opacity: loading ? 0.5 : 1,
+                    },
+                  ]}
+                >
+                  <View style={styles.phoneIconLeft}>
+                    <Ionicons name="call" size={18} color={colors.textSecondary} />
+                  </View>
+                  <TouchableWithoutFeedback
+                    onPress={() => !loading && setPhoneFocused(true)}
+                    disabled={loading}
+                  >
+                    <View style={styles.phoneInputWrapper}>
+                      <PhoneInput
+                        ref={phoneInputRef}
+                        value={formData.phone}
+                        defaultCode="UZ"
+                        layout="first"
+                        onChangeText={(text) =>
+                          setFormData((prev) => ({ ...prev, phone: text }))
+                        }
+                        onFocus={() => setPhoneFocused(true)}
+                        onBlur={() => setPhoneFocused(false)}
+                        containerStyle={styles.phoneInput}
+                        textContainerStyle={styles.phoneTextInput}
+                        disabled={loading}
+                      />
+                    </View>
+                  </TouchableWithoutFeedback>
+                </View>
               </View>
 
               {/* Email */}
@@ -239,6 +352,7 @@ function AddDriverModal({ visible, onClose }: AddDriverModalProps) {
                   placeholder="Enter email"
                   keyboardType="email-address"
                   autoCapitalize="none"
+                  disabled={loading}
                 />
               </View>
 
@@ -246,8 +360,12 @@ function AddDriverModal({ visible, onClose }: AddDriverModalProps) {
               <View style={styles.formSection}>
                 <Text style={styles.sectionLabel}>License Front</Text>
                 <Pressable
-                  style={styles.imagePickerButton}
+                  style={[
+                    styles.imagePickerButton,
+                    loading && { opacity: 0.5 },
+                  ]}
                   onPress={() => pickImage("front")}
+                  disabled={loading}
                 >
                   {licenseFront ? (
                     <Image
@@ -271,8 +389,12 @@ function AddDriverModal({ visible, onClose }: AddDriverModalProps) {
               <View style={styles.formSection}>
                 <Text style={styles.sectionLabel}>License Back</Text>
                 <Pressable
-                  style={styles.imagePickerButton}
+                  style={[
+                    styles.imagePickerButton,
+                    loading && { opacity: 0.5 },
+                  ]}
                   onPress={() => pickImage("back")}
+                  disabled={loading}
                 >
                   {licenseBack ? (
                     <Image
@@ -292,8 +414,9 @@ function AddDriverModal({ visible, onClose }: AddDriverModalProps) {
                 </Pressable>
               </View>
 
-              {/* Bottom padding for scroll */}
+              {/* Bottom padding */}
               <View style={{ height: 20 }} />
+              </View>
             </ScrollView>
 
             {/* Fixed Submit Button */}
@@ -302,7 +425,7 @@ function AddDriverModal({ visible, onClose }: AddDriverModalProps) {
                 title="Submit"
                 onPress={handleSubmit}
                 loading={loading}
-                disabled={loading}
+                disabled={!isFormValid || loading}
               />
             </View>
           </View>
@@ -476,6 +599,7 @@ export default function Drivers() {
         <AddDriverModal
           visible={showAddDriverModal}
           onClose={() => setShowAddDriverModal(false)}
+          onSuccess={() => fetchDrivers(true)}
         />
       </SafeAreaView>
     );
@@ -520,6 +644,7 @@ export default function Drivers() {
       <AddDriverModal
         visible={showAddDriverModal}
         onClose={() => setShowAddDriverModal(false)}
+        onSuccess={() => fetchDrivers(true)}
       />
     </SafeAreaView>
   );
@@ -748,8 +873,10 @@ const styles = StyleSheet.create({
     width: 40,
     alignItems: "flex-end",
   },
-  modalScroll: {
+  modalFormScroll: {
     flex: 1,
+  },
+  modalFormContent: {
     paddingHorizontal: 20,
     paddingTop: 20,
   },
@@ -761,6 +888,51 @@ const styles = StyleSheet.create({
     fontWeight: "500",
     color: colors.textPrimary,
     marginBottom: 8,
+  },
+  phoneInputOuterContainer: {
+    borderWidth: 2,
+    borderRadius: 12,
+    backgroundColor: colors.background,
+    overflow: "hidden",
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  phoneIconLeft: {
+    paddingLeft: 14,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  phoneInputWrapper: {
+    flex: 1,
+  },
+  phoneInput: {
+    flex: 1,
+    backgroundColor: "transparent",
+    height: 52,
+    marginLeft: -10,
+  },
+  phoneTextInput: {
+    backgroundColor: "transparent",
+    paddingVertical: 0,
+    paddingLeft: 4,
+  },
+  phoneCodeText: {
+    fontSize: 16,
+    color: colors.textPrimary,
+    fontWeight: "500",
+  },
+  phoneFlagButton: {
+    width: 60,
+    justifyContent: "center",
+    alignItems: "center",
+    borderRightWidth: 1,
+    borderRightColor: colors.border,
+    paddingHorizontal: 0,
+  },
+  phoneTextInputStyle: {
+    fontSize: 16,
+    color: colors.textPrimary,
+    height: 52,
   },
   imagePickerButton: {
     height: 160,

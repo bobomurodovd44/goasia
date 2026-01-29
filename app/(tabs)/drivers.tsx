@@ -1,15 +1,24 @@
 import { Ionicons } from "@expo/vector-icons";
+import * as ImagePicker from "expo-image-picker";
 import React, { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
+  Image,
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
   Pressable,
   RefreshControl,
+  ScrollView,
   StyleSheet,
   Text,
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import Button from "../../src/components/Button";
+import Input from "../../src/components/Input";
+import Toggle from "../../src/components/Toggle";
 import { useAuth } from "../../src/contexts/AuthContext";
 import feathersClient from "../../src/services/feathersClient";
 import { colors } from "../../src/theme/colors";
@@ -94,6 +103,215 @@ function ErrorState({ message, onRetry }: { message: string; onRetry: () => void
   );
 }
 
+interface AddDriverModalProps {
+  visible: boolean;
+  onClose: () => void;
+}
+
+function AddDriverModal({ visible, onClose }: AddDriverModalProps) {
+  const [isActive, setIsActive] = useState("active");
+  const [formData, setFormData] = useState({
+    firstName: "",
+    lastName: "",
+    phone: "",
+    email: "",
+  });
+  const [licenseFront, setLicenseFront] = useState<string | null>(null);
+  const [licenseBack, setLicenseBack] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  const pickImage = async (side: "front" | "back") => {
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [4, 3],
+      quality: 1,
+    });
+
+    if (!result.canceled && result.assets && result.assets.length > 0) {
+      if (side === "front") {
+        setLicenseFront(result.assets[0].uri);
+      } else {
+        setLicenseBack(result.assets[0].uri);
+      }
+    }
+  };
+
+  const handleSubmit = () => {
+    // Just log for now - no actual API call
+    console.log("Submit driver:", {
+      ...formData,
+      isActive: isActive === "active",
+      licenseFront,
+      licenseBack,
+    });
+    onClose();
+  };
+
+  return (
+    <Modal
+      visible={visible}
+      animationType="slide"
+      transparent
+      onRequestClose={onClose}
+    >
+      <View style={styles.modalOverlay}>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+          style={styles.modalKeyboardView}
+        >
+          <View style={styles.modalContent}>
+            {/* Header */}
+            <View style={styles.modalHeader}>
+              <Pressable style={styles.modalBackButton} onPress={onClose}>
+                <Ionicons name="chevron-back" size={24} color={colors.textPrimary} />
+              </Pressable>
+              <Text style={styles.modalTitle}>Add Driver</Text>
+              <View style={styles.modalCloseButton} />
+            </View>
+
+            {/* Scrollable Form */}
+            <ScrollView
+              style={styles.modalScroll}
+              showsVerticalScrollIndicator={false}
+              keyboardShouldPersistTaps="handled"
+            >
+              {/* Active/Inactive Toggle */}
+              <View style={styles.formSection}>
+                <Text style={styles.sectionLabel}>Status</Text>
+                <Toggle
+                  options={[
+                    { label: "Active", value: "active" },
+                    { label: "Inactive", value: "inactive" },
+                  ]}
+                  selected={isActive}
+                  onSelect={setIsActive}
+                />
+              </View>
+
+              {/* First Name */}
+              <View style={styles.formSection}>
+                <Input
+                  label="First Name"
+                  value={formData.firstName}
+                  onChangeText={(text) =>
+                    setFormData((prev) => ({ ...prev, firstName: text }))
+                  }
+                  placeholder="Enter first name"
+                  autoCapitalize="words"
+                />
+              </View>
+
+              {/* Last Name */}
+              <View style={styles.formSection}>
+                <Input
+                  label="Last Name"
+                  value={formData.lastName}
+                  onChangeText={(text) =>
+                    setFormData((prev) => ({ ...prev, lastName: text }))
+                  }
+                  placeholder="Enter last name"
+                  autoCapitalize="words"
+                />
+              </View>
+
+              {/* Phone */}
+              <View style={styles.formSection}>
+                <Input
+                  label="Phone"
+                  value={formData.phone}
+                  onChangeText={(text) =>
+                    setFormData((prev) => ({ ...prev, phone: text }))
+                  }
+                  placeholder="Enter phone number"
+                  keyboardType="phone-pad"
+                />
+              </View>
+
+              {/* Email */}
+              <View style={styles.formSection}>
+                <Input
+                  label="Email"
+                  value={formData.email}
+                  onChangeText={(text) =>
+                    setFormData((prev) => ({ ...prev, email: text }))
+                  }
+                  placeholder="Enter email"
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                />
+              </View>
+
+              {/* License Front Image Picker */}
+              <View style={styles.formSection}>
+                <Text style={styles.sectionLabel}>License Front</Text>
+                <Pressable
+                  style={styles.imagePickerButton}
+                  onPress={() => pickImage("front")}
+                >
+                  {licenseFront ? (
+                    <Image
+                      source={{ uri: licenseFront }}
+                      style={styles.imagePreview}
+                    />
+                  ) : (
+                    <View style={styles.imagePickerPlaceholder}>
+                      <Ionicons
+                        name="camera-outline"
+                        size={32}
+                        color={colors.textSecondary}
+                      />
+                      <Text style={styles.imagePickerText}>Choose Photo</Text>
+                    </View>
+                  )}
+                </Pressable>
+              </View>
+
+              {/* License Back Image Picker */}
+              <View style={styles.formSection}>
+                <Text style={styles.sectionLabel}>License Back</Text>
+                <Pressable
+                  style={styles.imagePickerButton}
+                  onPress={() => pickImage("back")}
+                >
+                  {licenseBack ? (
+                    <Image
+                      source={{ uri: licenseBack }}
+                      style={styles.imagePreview}
+                    />
+                  ) : (
+                    <View style={styles.imagePickerPlaceholder}>
+                      <Ionicons
+                        name="camera-outline"
+                        size={32}
+                        color={colors.textSecondary}
+                      />
+                      <Text style={styles.imagePickerText}>Choose Photo</Text>
+                    </View>
+                  )}
+                </Pressable>
+              </View>
+
+              {/* Bottom padding for scroll */}
+              <View style={{ height: 20 }} />
+            </ScrollView>
+
+            {/* Fixed Submit Button */}
+            <View style={styles.modalFooter}>
+              <Button
+                title="Submit"
+                onPress={handleSubmit}
+                loading={loading}
+                disabled={loading}
+              />
+            </View>
+          </View>
+        </KeyboardAvoidingView>
+      </View>
+    </Modal>
+  );
+}
+
 export default function Drivers() {
   const { user } = useAuth();
 
@@ -104,6 +322,7 @@ export default function Drivers() {
   const [hasMore, setHasMore] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [skip, setSkip] = useState(0);
+  const [showAddDriverModal, setShowAddDriverModal] = useState(false);
 
   const fetchDrivers = useCallback(
     async (reset = false) => {
@@ -130,19 +349,21 @@ export default function Drivers() {
         const totalDrivers =
           (response as PaginatedResponse<Driver>).total || fetchedDrivers.length;
 
-        // Use functional state update to avoid stale closure
-        setDrivers(prevDrivers => {
+        setDrivers((prevDrivers) => {
           if (shouldReset) {
             return fetchedDrivers;
           }
-          const existingIds = new Set(prevDrivers.map(d => d._id));
-          const newDrivers = fetchedDrivers.filter(d => !existingIds.has(d._id));
+          const existingIds = new Set(prevDrivers.map((d) => d._id));
+          const newDrivers = fetchedDrivers.filter(
+            (d) => !existingIds.has(d._id)
+          );
           return [...prevDrivers, ...newDrivers];
         });
 
         const fetchedCount = fetchedDrivers.length;
-        // Calculate hasMore based on fetched count and total
-        setHasMore(fetchedCount === PAGE_SIZE && (currentSkip + fetchedCount) < totalDrivers);
+        setHasMore(
+          fetchedCount === PAGE_SIZE && currentSkip + fetchedCount < totalDrivers
+        );
         setSkip(currentSkip + fetchedCount);
         setError(null);
       } catch (err: any) {
@@ -151,7 +372,6 @@ export default function Drivers() {
           setError(err.message || "Failed to load drivers");
         }
       } finally {
-        // Only reset loading on initial fetch
         if (shouldReset) {
           setIsLoading(false);
         }
@@ -191,6 +411,17 @@ export default function Drivers() {
     fetchDrivers(true);
   };
 
+  const renderHeaderActions = () => (
+    <View style={styles.headerActions}>
+      <Pressable
+        style={styles.addButton}
+        onPress={() => setShowAddDriverModal(true)}
+      >
+        <Ionicons name="add" size={24} color="#FFFFFF" />
+      </Pressable>
+    </View>
+  );
+
   const renderItem = ({ item }: { item: Driver }) => {
     const style = getActiveBadgeStyle(item.isActive);
 
@@ -202,7 +433,8 @@ export default function Drivers() {
           <View style={styles.thumbnailContainer}>
             <View style={[styles.thumbnail, { backgroundColor: "#E0E7FF" }]}>
               <Text style={styles.thumbnailText}>
-                {item.firstName.charAt(0)}{item.lastName.charAt(0)}
+                {item.firstName.charAt(0)}
+                {item.lastName.charAt(0)}
               </Text>
             </View>
           </View>
@@ -234,12 +466,17 @@ export default function Drivers() {
       <SafeAreaView style={styles.container} edges={["top"]}>
         <View style={styles.header}>
           <Text style={styles.headerTitle}>Drivers</Text>
+          {renderHeaderActions()}
         </View>
         <View style={styles.loadingContainer}>
           <LoadingSkeleton />
           <LoadingSkeleton />
           <LoadingSkeleton />
         </View>
+        <AddDriverModal
+          visible={showAddDriverModal}
+          onClose={() => setShowAddDriverModal(false)}
+        />
       </SafeAreaView>
     );
   }
@@ -248,6 +485,7 @@ export default function Drivers() {
     <SafeAreaView style={styles.container} edges={["top"]}>
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Drivers</Text>
+        {renderHeaderActions()}
       </View>
 
       {error ? (
@@ -278,6 +516,11 @@ export default function Drivers() {
           ListEmptyComponent={<EmptyState message="No drivers found" />}
         />
       )}
+
+      <AddDriverModal
+        visible={showAddDriverModal}
+        onClose={() => setShowAddDriverModal(false)}
+      />
     </SafeAreaView>
   );
 }
@@ -296,6 +539,24 @@ const styles = StyleSheet.create({
     backgroundColor: "#FFFFFF",
     borderBottomWidth: 1,
     borderBottomColor: "#E5E7EB",
+  },
+  headerActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
+  addButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: colors.primary,
+    justifyContent: "center",
+    alignItems: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
   headerTitle: {
     fontSize: 24,
@@ -450,5 +711,86 @@ const styles = StyleSheet.create({
     color: "#FFFFFF",
     fontSize: 16,
     fontWeight: "600",
+  },
+  // Modal styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+  },
+  modalKeyboardView: {
+    flex: 1,
+  },
+  modalContent: {
+    flex: 1,
+    backgroundColor: "#FFFFFF",
+  },
+  modalHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: "#E5E7EB",
+    backgroundColor: "#FFFFFF",
+  },
+  modalBackButton: {
+    padding: 4,
+    width: 40,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: "700",
+    color: "#111827",
+  },
+  modalCloseButton: {
+    padding: 4,
+    width: 40,
+    alignItems: "flex-end",
+  },
+  modalScroll: {
+    flex: 1,
+    paddingHorizontal: 20,
+    paddingTop: 20,
+  },
+  formSection: {
+    marginBottom: 20,
+  },
+  sectionLabel: {
+    fontSize: 14,
+    fontWeight: "500",
+    color: colors.textPrimary,
+    marginBottom: 8,
+  },
+  imagePickerButton: {
+    height: 160,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: "#E5E7EB",
+    borderStyle: "dashed",
+    overflow: "hidden",
+    backgroundColor: "#F9FAFB",
+  },
+  imagePreview: {
+    width: "100%",
+    height: "100%",
+    resizeMode: "cover",
+  },
+  imagePickerPlaceholder: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  imagePickerText: {
+    fontSize: 14,
+    color: colors.textSecondary,
+    marginTop: 8,
+  },
+  modalFooter: {
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    borderTopWidth: 1,
+    borderTopColor: "#E5E7EB",
+    backgroundColor: "#FFFFFF",
   },
 });

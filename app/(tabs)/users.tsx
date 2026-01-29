@@ -69,14 +69,21 @@ function Avatar({ firstName, lastName }: { firstName: string; lastName: string }
   );
 }
 
-function UserRow({ user }: { user: User }) {
+function UserRow({ user, isOwner }: { user: User; isOwner: boolean }) {
   return (
     <View style={styles.row}>
       <Avatar firstName={user.firstName} lastName={user.lastName} />
       <View style={styles.infoContainer}>
-        <Text style={styles.nameText}>
-          {user.firstName} {user.lastName}
-        </Text>
+        <View style={styles.nameRow}>
+          <Text style={styles.nameText}>
+            {user.firstName} {user.lastName}
+          </Text>
+          {isOwner && (
+            <View style={styles.ownerBadge}>
+              <Text style={styles.ownerBadgeText}>Owner</Text>
+            </View>
+          )}
+        </View>
         <Text style={styles.emailText}>{user.email}</Text>
         {user.phone && <Text style={styles.phoneText}>{user.phone}</Text>}
       </View>
@@ -530,7 +537,9 @@ export default function Users() {
     fetchUsers(true);
   };
 
-  const renderUser = ({ item }: { item: User }) => <UserRow user={item} />;
+  const renderUser = ({ item }: { item: User }) => (
+    <UserRow user={item} isOwner={item._id === user?.companyOwnerId} />
+  );
 
   const renderFooter = () => {
     if (isLoadingMore) {
@@ -545,12 +554,14 @@ export default function Users() {
 
   const renderHeaderActions = () => (
     <View style={styles.headerActions}>
-      <Pressable
-        style={styles.addButton}
-        onPress={() => setShowAddUserModal(true)}
-      >
-        <Ionicons name="add" size={24} color="#FFFFFF" />
-      </Pressable>
+      {user?._id === user?.companyOwnerId && (
+        <Pressable
+          style={styles.addButton}
+          onPress={() => setShowAddUserModal(true)}
+        >
+          <Ionicons name="add" size={24} color="#FFFFFF" />
+        </Pressable>
+      )}
       <Pressable
         style={({ pressed }) => [
           styles.logoutButton,
@@ -734,6 +745,22 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "600",
     color: "#111827",
+  },
+  nameRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  ownerBadge: {
+    backgroundColor: colors.primary,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
+  ownerBadgeText: {
+    color: "#FFFFFF",
+    fontSize: 10,
+    fontWeight: "600",
   },
   emailText: {
     fontSize: 14,

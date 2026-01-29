@@ -74,10 +74,14 @@ export default function SignUp() {
       newErrors.fullName = t('signup.validationFullName') || 'Full name is too short';
     }
 
-    const checkPhone = phoneInputRef.current?.isValidNumber(phone);
+    // Get the selected country code and validate
+    const selectedCountryCode = phoneInputRef.current?.getCountryCode() || 'UZ';
+    const checkPhone = phoneInputRef.current?.isValidNumber(phone, selectedCountryCode);
     if (!checkPhone) {
       newErrors.phone = t('signup.validationPhone') || 'Invalid phone number';
     }
+
+    const fullPhone = getFullPhoneNumber();
 
     if (!isValidEmail(email)) {
       newErrors.email = 'Please enter a valid email address';
@@ -94,7 +98,7 @@ export default function SignUp() {
     }
 
     store.setCredentials(email, password);
-    store.setPersonalInfo(firstName, lastName, phone);
+    store.setPersonalInfo(firstName, lastName, fullPhone);
     store.completeStep1();
 
     router.push('/company-form');
@@ -104,6 +108,13 @@ export default function SignUp() {
     if (errors.phone) return colors.danger;
     if (phoneFocused) return colors.focus;
     return colors.border;
+  };
+
+  const getFullPhoneNumber = (): string => {
+    // getCallingCode() returns numeric code like "998"
+    const callingCode = phoneInputRef.current?.getCallingCode() || '998';
+    const formattedPhone = phone.startsWith('+') ? phone : `+${callingCode}${phone}`;
+    return formattedPhone;
   };
 
   return (

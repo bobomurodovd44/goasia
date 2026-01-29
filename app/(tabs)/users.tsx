@@ -201,10 +201,14 @@ function AddUserModal({
       newErrors.lastName = "Last name is required";
     }
 
-    const checkPhone = phoneInputRef.current?.isValidNumber(phone);
+    // Get the selected country code and validate
+    const selectedCountryCode = phoneInputRef.current?.getCountryCode() || 'UZ';
+    const checkPhone = phoneInputRef.current?.isValidNumber(phone, selectedCountryCode);
     if (!checkPhone) {
       newErrors.phone = "Invalid phone number";
     }
+
+    const fullPhone = getFullPhoneNumber();
 
     if (!isValidEmail(email)) {
       newErrors.email = "Please enter a valid email address";
@@ -234,7 +238,7 @@ function AddUserModal({
         firstName,
         lastName,
         email,
-        phone,
+        phone: fullPhone,
         firebaseUid,
         role: "company",
         type: "legal-entity",
@@ -265,6 +269,13 @@ function AddUserModal({
     if (errors.phone) return colors.danger;
     if (phoneFocused) return colors.focus;
     return colors.border;
+  };
+
+  const getFullPhoneNumber = (): string => {
+    // getCallingCode() returns numeric code like "998"
+    const callingCode = phoneInputRef.current?.getCallingCode() || '998';
+    const formattedPhone = phone.startsWith('+') ? phone : `+${callingCode}${phone}`;
+    return formattedPhone;
   };
 
   return (

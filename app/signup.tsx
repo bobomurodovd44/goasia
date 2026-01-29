@@ -35,13 +35,15 @@ function isValidPassword(password: string): boolean {
 
 export default function SignUp() {
   const { t } = useTranslation();
-  const [fullName, setFullName] = useState('');
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
   const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [phoneFocused, setPhoneFocused] = useState(false);
   const [errors, setErrors] = useState<{
-    fullName?: string;
+    firstName?: string;
+    lastName?: string;
     phone?: string;
     email?: string;
     password?: string;
@@ -51,7 +53,7 @@ export default function SignUp() {
 
   const store = useSignupWizard();
 
-  const isFormValid = fullName.length > 0 && phone.length > 0 && email.length > 0 && password.length > 0;
+  const isFormValid = firstName.length > 0 && lastName.length > 0 && phone.length > 0 && email.length > 0 && password.length > 0;
 
   const handleGoToLogin = () => {
     store.resetWizard();
@@ -66,12 +68,13 @@ export default function SignUp() {
     setErrors({});
 
     const newErrors: typeof errors = {};
-    const nameParts = fullName.trim().split(/\s+/);
-    const firstName = nameParts[0];
-    const lastName = nameParts.slice(1).join(' ') || firstName;
 
-    if (fullName.length < 2) {
-      newErrors.fullName = t('signup.validationFullName') || 'Full name is too short';
+    if (firstName.length < 2) {
+      newErrors.firstName = t('signup.validationFirstName') || 'First name is too short';
+    }
+
+    if (lastName.length < 2) {
+      newErrors.lastName = t('signup.validationLastName') || 'Last name is too short';
     }
 
     // Get the selected country code and validate
@@ -98,7 +101,7 @@ export default function SignUp() {
     }
 
     store.setCredentials(email, password);
-    store.setPersonalInfo(firstName, lastName, fullPhone);
+    store.setPersonalInfo(firstName.trim(), lastName.trim(), fullPhone);
     store.completeStep1();
 
     router.push('/company-form');
@@ -154,15 +157,29 @@ export default function SignUp() {
 
             <Animated.View entering={FadeInDown.delay(300).duration(500)}>
               <Input
-                label={t('signup.fullName')}
-                value={fullName}
+                label={t('signup.firstName')}
+                value={firstName}
                 onChangeText={(text) => {
-                  setFullName(text);
-                  setErrors(prev => ({ ...prev, fullName: undefined }));
+                  setFirstName(text);
+                  setErrors(prev => ({ ...prev, firstName: undefined }));
                 }}
-                placeholder={t('signup.placeholderFullName')}
+                placeholder={t('signup.placeholderFirstName')}
                 autoCapitalize="words"
-                error={errors.fullName}
+                error={errors.firstName}
+              />
+            </Animated.View>
+
+            <Animated.View entering={FadeInDown.delay(350).duration(500)} style={styles.lastNameContainer}>
+              <Input
+                label={t('signup.lastName')}
+                value={lastName}
+                onChangeText={(text) => {
+                  setLastName(text);
+                  setErrors(prev => ({ ...prev, lastName: undefined }));
+                }}
+                placeholder={t('signup.placeholderLastName')}
+                autoCapitalize="words"
+                error={errors.lastName}
               />
             </Animated.View>
 
@@ -303,6 +320,9 @@ const styles = StyleSheet.create({
   },
   phoneWrapper: {
     marginBottom: 16,
+  },
+  lastNameContainer: {
+    marginTop: 4,
   },
   label: {
     fontSize: 16,

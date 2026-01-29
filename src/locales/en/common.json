@@ -26,9 +26,11 @@
     "comingSoon": "Coming Soon"
   },
   "signup": {
-    "fullName": "Full Name",
+    "firstName": "First Name",
+    "lastName": "Last Name",
     "phone": "Phone Number",
-    "placeholderFullName": "Enter your full name",
+    "placeholderFirstName": "Enter your first name",
+    "placeholderLastName": "Enter your last name",
     "placeholderPhone": "Enter your phone number",
     "email": "Email",
     "placeholderEmail": "Enter your email",
@@ -37,7 +39,8 @@
     "signUp": "Sign Up",
     "haveAccount": "Have an account?",
     "goToLogin": "Go to login",
-    "validationFullName": "Please enter your full name",
+    "validationFirstName": "First name is too short",
+    "validationLastName": "Last name is too short",
     "validationPhone": "Please enter a valid phone number",
     "validationEmail": "Please enter a valid email",
     "successTitle": "Success",

@@ -24,8 +24,10 @@ import Animated, {
   SlideInUp,
   SlideOutDown,
 } from "react-native-reanimated";
+import { createUserWithEmailAndPassword, AuthError } from "firebase/auth";
 import { useAuth } from "../../src/contexts/AuthContext";
 import feathersClient from "../../src/services/feathersClient";
+import { getFirebaseAuth } from "../../src/config/firebase";
 import { colors } from "../../src/theme/colors";
 import Input from "../../src/components/Input";
 import Button from "../../src/components/Button";
@@ -127,10 +129,13 @@ function isValidPassword(password: string): boolean {
 function AddUserModal({
   visible,
   onClose,
+  onSuccess,
 }: {
   visible: boolean;
   onClose: () => void;
+  onSuccess: () => void;
 }) {
+  const { user } = useAuth();
   const [fullName, setFullName] = useState("");
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
@@ -156,6 +161,21 @@ function AddUserModal({
     setPassword("");
     setErrors({});
     onClose();
+  };
+
+  const getFirebaseErrorMessage = (error: AuthError): string => {
+    switch (error.code) {
+      case "auth/email-already-in-use":
+        return "This email is already registered";
+      case "auth/invalid-email":
+        return "Invalid email address";
+      case "auth/weak-password":
+        return "Password should be at least 6 characters";
+      case "auth/operation-not-allowed":
+        return "Email/password sign-up is disabled";
+      default:
+        return error.message || "Failed to create user";
+    }
   };
 
   const handleAddUser = async () => {
@@ -191,13 +211,44 @@ function AddUserModal({
     setLoading(true);
 
     try {
-      console.log("[AddUser] Creating user:", { firstName, lastName, email, phone });
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-      Alert.alert("Success", "User added successfully!", [
-        { text: "OK", onPress: handleClose },
-      ]);
+      console.log("[AddUser] Creating Firebase user:", { email, firstName, lastName });
+
+      // 1. Create Firebase user with email and password
+      const auth = getFirebaseAuth();
+      const firebaseRes = await createUserWithEmailAndPassword(auth, email, password);
+      const firebaseUid = firebaseRes.user.uid;
+
+      console.log("[AddUser] Firebase user created, uid:", firebaseUid);
+
+      // 2. Create user in backend
+      await (feathersClient as any).service("users").create({
+        firstName,
+        lastName,
+        email,
+        phone,
+        firebaseUid,
+        role: "company",
+        type: "legal-entity",
+        companyId: user?.companyId,
+      });
+
+      console.log("[AddUser] Backend user created successfully");
+
+      // 3. Handle success - close modal and refresh list
+      handleClose();
+      onSuccess();
     } catch (error: any) {
-      Alert.alert("Error", error.message || "Failed to add user");
+      console.error("[AddUser] Error:", error);
+
+      // Handle Firebase auth errors
+      if (error.code && error.code.startsWith("auth/")) {
+        const message = getFirebaseErrorMessage(error as AuthError);
+        setErrors({ email: message });
+      } else {
+        // Handle backend errors
+        const message = error.message || "Failed to add user";
+        Alert.alert("Error", message);
+      }
     } finally {
       setLoading(false);
     }
@@ -528,6 +579,7 @@ export default function Users() {
         <AddUserModal
           visible={showAddUserModal}
           onClose={() => setShowAddUserModal(false)}
+          onSuccess={() => fetchUsers(true)}
         />
       </SafeAreaView>
     );
@@ -572,6 +624,7 @@ export default function Users() {
       <AddUserModal
         visible={showAddUserModal}
         onClose={() => setShowAddUserModal(false)}
+        onSuccess={() => fetchUsers(true)}
       />
     </SafeAreaView>
   );

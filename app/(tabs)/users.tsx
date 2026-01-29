@@ -143,13 +143,15 @@ function AddUserModal({
   onSuccess: () => void;
 }) {
   const { user } = useAuth();
-  const [fullName, setFullName] = useState("");
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [phoneFocused, setPhoneFocused] = useState(false);
   const [errors, setErrors] = useState<{
-    fullName?: string;
+    firstName?: string;
+    lastName?: string;
     phone?: string;
     email?: string;
     password?: string;
@@ -159,10 +161,11 @@ function AddUserModal({
   const phoneInputRef = useRef<PhoneInput>(null);
 
   const isFormValid =
-    fullName.length > 0 && phone.length > 0 && email.length > 0 && password.length > 0;
+    firstName.length > 0 && lastName.length > 0 && phone.length > 0 && email.length > 0 && password.length > 0;
 
   const handleClose = () => {
-    setFullName("");
+    setFirstName("");
+    setLastName("");
     setPhone("");
     setEmail("");
     setPassword("");
@@ -189,12 +192,13 @@ function AddUserModal({
     setErrors({});
 
     const newErrors: typeof errors = {};
-    const nameParts = fullName.trim().split(/\s+/);
-    const firstName = nameParts[0];
-    const lastName = nameParts.slice(1).join(" ") || firstName;
 
-    if (fullName.length < 2) {
-      newErrors.fullName = "Full name is too short";
+    if (firstName.length < 1) {
+      newErrors.firstName = "First name is required";
+    }
+
+    if (lastName.length < 1) {
+      newErrors.lastName = "Last name is required";
     }
 
     const checkPhone = phoneInputRef.current?.isValidNumber(phone);
@@ -302,25 +306,43 @@ function AddUserModal({
                 keyboardShouldPersistTaps="handled"
                 showsVerticalScrollIndicator={false}
               >
+                {/* Form Fields */}
                 <Animated.View
                   entering={FadeInDown.delay(200).duration(400)}
                   style={styles.formSection}
                 >
                   <Input
-                    label="Full Name"
-                    value={fullName}
+                    label="First Name"
+                    value={firstName}
                     onChangeText={(text) => {
-                      setFullName(text);
-                      setErrors((prev) => ({ ...prev, fullName: undefined }));
+                      setFirstName(text);
+                      setErrors((prev) => ({ ...prev, firstName: undefined }));
                     }}
-                    placeholder="Enter full name"
+                    placeholder="Enter first name"
                     autoCapitalize="words"
-                    error={errors.fullName}
+                    error={errors.firstName}
                   />
                 </Animated.View>
 
                 <Animated.View
-                  entering={FadeInDown.delay(300).duration(400)}
+                  entering={FadeInDown.delay(250).duration(400)}
+                  style={styles.formSection}
+                >
+                  <Input
+                    label="Last Name"
+                    value={lastName}
+                    onChangeText={(text) => {
+                      setLastName(text);
+                      setErrors((prev) => ({ ...prev, lastName: undefined }));
+                    }}
+                    placeholder="Enter last name"
+                    autoCapitalize="words"
+                    error={errors.lastName}
+                  />
+                </Animated.View>
+
+                <Animated.View
+                  entering={FadeInDown.delay(400).duration(400)}
                   style={styles.phoneWrapper}
                 >
                   <Text style={styles.label}>Phone</Text>
@@ -361,7 +383,7 @@ function AddUserModal({
                 </Animated.View>
 
                 <Animated.View
-                  entering={FadeInDown.delay(400).duration(400)}
+                  entering={FadeInDown.delay(500).duration(400)}
                   style={styles.formSection}
                 >
                   <Input
@@ -379,7 +401,7 @@ function AddUserModal({
                 </Animated.View>
 
                 <Animated.View
-                  entering={FadeInDown.delay(500).duration(400)}
+                  entering={FadeInDown.delay(600).duration(400)}
                   style={styles.formSection}
                 >
                   <Input
@@ -396,20 +418,18 @@ function AddUserModal({
                     error={errors.password}
                   />
                 </Animated.View>
-
-                <Animated.View
-                  entering={FadeInDown.delay(600).duration(400)}
-                  style={styles.formSection}
-                >
-                  <Button
-                    title="Add User"
-                    onPress={handleAddUser}
-                    disabled={!isFormValid}
-                    loading={loading}
-                  />
-                </Animated.View>
               </ScrollView>
             </TouchableWithoutFeedback>
+
+            {/* Fixed Bottom Button */}
+            <View style={styles.fixedButtonContainer}>
+              <Button
+                title="Add User"
+                onPress={handleAddUser}
+                disabled={!isFormValid}
+                loading={loading}
+              />
+            </View>
           </KeyboardAvoidingView>
         </Animated.View>
       </View>
@@ -824,9 +844,6 @@ const styles = StyleSheet.create({
   modalContainer: {
     flex: 1,
     backgroundColor: colors.background,
-    marginTop: 60,
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
   },
   modalHeader: {
     flexDirection: "row",
@@ -837,8 +854,6 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: "#E5E7EB",
     backgroundColor: "#FFFFFF",
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
   },
   modalBackButton: {
     padding: 4,
@@ -862,21 +877,29 @@ const styles = StyleSheet.create({
   },
   modalScrollContent: {
     flexGrow: 1,
+    paddingHorizontal: 20,
+    paddingVertical: 20,
+    paddingBottom: 16,
+  },
+  fixedButtonContainer: {
     paddingHorizontal: 24,
-    paddingVertical: 40,
-    paddingBottom: 100,
+    paddingVertical: 16,
+    paddingBottom: 24,
+    backgroundColor: colors.background,
+    borderTopWidth: 1,
+    borderTopColor: "#E5E7EB",
   },
   formSection: {
-    marginBottom: 20,
+    marginBottom: 8,
   },
   phoneWrapper: {
-    marginBottom: 20,
+    marginBottom: 8,
   },
   label: {
-    fontSize: 16,
+    fontSize: 14,
     color: colors.textPrimary,
-    marginBottom: 8,
-    fontWeight: "400",
+    marginBottom: 4,
+    fontWeight: "500",
   },
   phoneInputOuterContainer: {
     borderWidth: 2,

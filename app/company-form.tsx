@@ -25,14 +25,12 @@ import { useSignupWizard } from '../src/store/signupWizard';
 import { signupApi } from '../src/services/signupApi';
 import { useAuth } from '../src/contexts/AuthContext';
 
-type CompanyType = 'llc' | 'individual';
-
 export default function CompanyForm() {
   const { t } = useTranslation();
   const pathname = usePathname();
   const store = useSignupWizard();
   const { setUser } = useAuth();
-  
+
   const {
     fetchCurrentLocation,
     loading: locationLoading,
@@ -42,13 +40,9 @@ export default function CompanyForm() {
     location: initialLocation,
   } = useLocation();
 
-  const [companyName, setCompanyName] = useState('');
-  const [companyType, setCompanyType] = useState<CompanyType>('llc');
-  const [selectedLocation, setSelectedLocation] = useState<{ latitude: number; longitude: number } | null>(null);
-  const [selectedAddress, setSelectedAddress] = useState<Address | null>(null);
-  const [showMapModal, setShowMapModal] = useState(false);
   const [formLoading, setFormLoading] = useState(false);
   const [isInitialized, setIsInitialized] = useState(false);
+  const [showMapModal, setShowMapModal] = useState(false);
 
   const toggleOptions = [
     { label: 'LLC', value: 'llc' },
@@ -64,24 +58,34 @@ export default function CompanyForm() {
   }, []);
 
   useEffect(() => {
-    if (initialLocation && !selectedLocation) {
-      setSelectedLocation(initialLocation);
+    if (initialLocation && !store.companyLocation) {
+      store.setCompanyData({
+        companyName: store.companyName,
+        companyType: store.companyType,
+        companyLocation: initialLocation,
+        companyAddress: store.companyAddress,
+      });
     }
-    if (initialAddress && !selectedAddress) {
-      setSelectedAddress(initialAddress);
+    if (initialAddress && !store.companyAddress) {
+      store.setCompanyData({
+        companyName: store.companyName,
+        companyType: store.companyType,
+        companyLocation: store.companyLocation,
+        companyAddress: initialAddress,
+      });
     }
   }, [initialLocation, initialAddress]);
 
   useEffect(() => {
     const checkStep1Completion = () => {
       const state = store;
-      
+
       if (!state.step1Completed || !state.email || !state.password) {
         Alert.alert(
           'Incomplete Registration',
           'Please complete Step 1 first to create your account.',
-          [{ 
-            text: 'OK', 
+          [{
+            text: 'OK',
             onPress: () => {
               store.resetWizard();
               router.replace('/signup');
@@ -90,31 +94,26 @@ export default function CompanyForm() {
         );
         return false;
       }
-      
+
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
       if (!state.email || !emailRegex.test(state.email)) {
         store.resetWizard();
         router.replace('/signup');
         return false;
       }
-      
+
       if (!state.password || state.password.length < 6) {
         store.resetWizard();
         router.replace('/signup');
         return false;
       }
-      
+
       return true;
     };
 
     if (pathname === '/company-form' && !isInitialized) {
       const isValid = checkStep1Completion();
       setIsInitialized(true);
-      
-      if (isValid) {
-        setCompanyName('');
-        setCompanyType('llc');
-      }
     }
   }, [pathname, store, isInitialized]);
 
@@ -122,17 +121,38 @@ export default function CompanyForm() {
     location: { latitude: number; longitude: number },
     address: Address
   ) => {
-    setSelectedLocation(location);
-    setSelectedAddress(address);
-    setShowMapModal(false);
+    store.setCompanyData({
+      companyName: store.companyName,
+      companyType: store.companyType,
+      companyLocation: location,
+      companyAddress: address,
+    });
+  };
+
+  const handleCompanyNameChange = (value: string) => {
+    store.setCompanyData({
+      companyName: value,
+      companyType: store.companyType,
+      companyLocation: store.companyLocation,
+      companyAddress: store.companyAddress,
+    });
+  };
+
+  const handleCompanyTypeChange = (value: 'llc' | 'individual') => {
+    store.setCompanyData({
+      companyName: store.companyName,
+      companyType: value,
+      companyLocation: store.companyLocation,
+      companyAddress: store.companyAddress,
+    });
   };
 
   const handleSubmit = async () => {
-    if (!companyName.trim()) {
+    if (!store.companyName.trim()) {
       Alert.alert('Validation', 'Please enter your company name');
       return;
     }
-    if (!selectedLocation || !selectedAddress) {
+    if (!store.companyLocation || !store.companyAddress) {
       Alert.alert('Validation', 'Please select your company location');
       return;
     }
@@ -147,21 +167,17 @@ export default function CompanyForm() {
         lastName: store.lastName,
         phone: store.phone,
         companyData: {
-          companyName: companyName.trim(),
-          companyType,
-          location: selectedLocation,
-          address: selectedAddress,
+          companyName: store.companyName.trim(),
+          companyType: store.companyType,
+          location: store.companyLocation,
+          address: store.companyAddress,
         },
       });
 
       setUser(result.user as any);
       store.resetWizard();
 
-      Alert.alert(
-        'Success',
-        'Your account has been created successfully!',
-        [{ text: 'Continue', onPress: () => router.replace('/(tabs)') }]
-      );
+      router.replace('/(tabs)');
     } catch (error: any) {
       Alert.alert(
         'Registration Failed',
@@ -177,8 +193,16 @@ export default function CompanyForm() {
     router.back();
   };
 
-  const addressDisplayText = selectedAddress
-    ? `${selectedAddress.city}${selectedAddress.city && selectedAddress.country ? ', ' : ''}${selectedAddress.country}`
+  const handleShowMapModal = () => {
+    setShowMapModal(true);
+  };
+
+  const handleCloseMapModal = () => {
+    setShowMapModal(false);
+  };
+
+  const addressDisplayText = store.companyAddress
+    ? `${store.companyAddress.city}${store.companyAddress.city && store.companyAddress.country ? ', ' : ''}${store.companyAddress.country}`
     : undefined;
 
   if (!store.step1Completed) {
@@ -212,14 +236,15 @@ export default function CompanyForm() {
           <Input
             label="Email"
             value={store.email || ''}
+            onChangeText={() => {}}
             disabled={true}
             placeholder="Email"
           />
 
           <Input
             label={t('companyForm.companyNameLabel') || 'Company Name'}
-            value={companyName}
-            onChangeText={setCompanyName}
+            value={store.companyName}
+            onChangeText={handleCompanyNameChange}
             placeholder={t('companyForm.companyNamePlaceholder') || 'Enter company name'}
             autoCapitalize="words"
           />
@@ -230,15 +255,15 @@ export default function CompanyForm() {
             </Text>
             <Toggle
               options={toggleOptions}
-              selected={companyType}
-              onSelect={(value) => setCompanyType(value as CompanyType)}
+              selected={store.companyType}
+              onSelect={(value) => handleCompanyTypeChange(value as 'llc' | 'individual')}
             />
           </View>
 
           <LocationInput
             label={t('companyForm.addressLabel') || 'Address'}
-            value={addressDisplayText}
-            onPress={() => setShowMapModal(true)}
+            value={addressDisplayText || ''}
+            onPress={handleShowMapModal}
             placeholder={t('companyForm.addressPlaceholder') || 'Select company address'}
             loading={locationLoading}
           />
@@ -255,7 +280,7 @@ export default function CompanyForm() {
             <Button
               title="Create Account"
               onPress={handleSubmit}
-              disabled={!companyName.trim() || !selectedLocation || !selectedAddress}
+              disabled={!store.companyName.trim() || !store.companyLocation || !store.companyAddress}
               loading={formLoading}
             />
           </View>
@@ -264,10 +289,10 @@ export default function CompanyForm() {
 
       <LocationMapModal
         visible={showMapModal}
-        onClose={() => setShowMapModal(false)}
+        onClose={handleCloseMapModal}
         onSelect={handleLocationSelect}
-        initialLocation={selectedLocation}
-        initialAddress={selectedAddress}
+        initialLocation={store.companyLocation}
+        initialAddress={store.companyAddress}
       />
     </SafeAreaView>
   );

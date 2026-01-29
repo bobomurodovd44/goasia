@@ -44,6 +44,7 @@ export default function SignUp() {
     fullName?: string;
     phone?: string;
     email?: string;
+    password?: string;
   }>({});
 
   const phoneInputRef = useRef<PhoneInput>(null);

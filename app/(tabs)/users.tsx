@@ -1,36 +1,36 @@
-import React, { useState, useEffect, useCallback, useRef } from "react";
+import { Ionicons } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
+import { AuthError, createUserWithEmailAndPassword } from "firebase/auth";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
-  View,
-  Text,
-  FlatList,
-  StyleSheet,
-  Pressable,
-  Alert,
   ActivityIndicator,
-  RefreshControl,
+  Alert,
+  FlatList,
   Keyboard,
   KeyboardAvoidingView,
-  Platform,
-  TouchableWithoutFeedback,
   Modal,
+  Platform,
+  Pressable,
+  RefreshControl,
   ScrollView,
+  StyleSheet,
+  Text,
+  TouchableWithoutFeedback,
+  View,
 } from "react-native";
-import { useRouter } from "expo-router";
-import { Ionicons } from "@expo/vector-icons";
-import { SafeAreaView } from "react-native-safe-area-context";
 import PhoneInput from "react-native-phone-number-input";
 import Animated, {
   FadeInDown,
   SlideInUp,
   SlideOutDown,
 } from "react-native-reanimated";
-import { createUserWithEmailAndPassword, AuthError } from "firebase/auth";
+import { SafeAreaView } from "react-native-safe-area-context";
+import Button from "../../src/components/Button";
+import Input from "../../src/components/Input";
+import { getFirebaseAuth } from "../../src/config/firebase";
 import { useAuth } from "../../src/contexts/AuthContext";
 import feathersClient from "../../src/services/feathersClient";
-import { getFirebaseAuth } from "../../src/config/firebase";
 import { colors } from "../../src/theme/colors";
-import Input from "../../src/components/Input";
-import Button from "../../src/components/Button";
 
 type User = {
   _id: string;
@@ -222,14 +222,12 @@ function AddUserModal({
     setLoading(true);
 
     try {
-      console.log("[AddUser] Creating Firebase user:", { email, firstName, lastName });
 
       // 1. Create Firebase user with email and password
       const auth = getFirebaseAuth();
       const firebaseRes = await createUserWithEmailAndPassword(auth, email, password);
       const firebaseUid = firebaseRes.user.uid;
 
-      console.log("[AddUser] Firebase user created, uid:", firebaseUid);
 
       // 2. Create user in backend
       await (feathersClient as any).service("users").create({
@@ -243,13 +241,11 @@ function AddUserModal({
         companyId: user?.companyId,
       });
 
-      console.log("[AddUser] Backend user created successfully");
 
       // 3. Handle success - close modal and refresh list
       handleClose();
       onSuccess();
     } catch (error: any) {
-      console.error("[AddUser] Error:", error);
 
       // Handle Firebase auth errors
       if (error.code && error.code.startsWith("auth/")) {
@@ -447,6 +443,7 @@ export default function Users() {
   const [error, setError] = useState<string | null>(null);
   const [skip, setSkip] = useState(0);
   const [showAddUserModal, setShowAddUserModal] = useState(false);
+  const [isCompanyOwner, setIsCompanyOwner] = useState(false);
 
   const fetchUsers = useCallback(
     async (reset = false) => {
@@ -459,7 +456,6 @@ export default function Users() {
       }
 
       try {
-        console.log("[Users] Fetching users, skip:", currentSkip);
 
         const response = await (feathersClient as any).service("users").find({
           query: {
@@ -475,12 +471,7 @@ export default function Users() {
         const totalUsers =
           (response as PaginatedResponse<User>).total || fetchedUsers.length;
 
-        console.log(
-          "[Users] Fetched:",
-          fetchedUsers.length,
-          "users, total:",
-          totalUsers
-        );
+  
 
         if (shouldReset) {
           setUsers(fetchedUsers);
@@ -510,7 +501,20 @@ export default function Users() {
   );
 
   useEffect(() => {
+    const checkOwnerStatus = async () => {
+      if (user?._id && user?.companyId) {
+        try {
+          const company = await (feathersClient as any).service("companies").get(user.companyId);
+          setIsCompanyOwner(company.ownerId === user._id);
+        } catch (err) {
+          console.error("[Users] Failed to fetch company:", err);
+          setIsCompanyOwner(false);
+        }
+      }
+    };
+
     if (user?.companyId) {
+      checkOwnerStatus();
       fetchUsers(true);
     } else if (user && !user.companyId) {
       setIsLoading(false);
@@ -541,9 +545,7 @@ export default function Users() {
         text: "Log Out",
         style: "destructive",
         onPress: async () => {
-          console.log("[Users] Logging out...");
           await logout();
-          console.log("[Users] Redirecting to login...");
           router.replace("/login");
         },
       },
@@ -556,7 +558,7 @@ export default function Users() {
   };
 
   const renderUser = ({ item }: { item: User }) => (
-    <UserRow user={item} isOwner={item._id === user?.companyOwnerId} />
+    <UserRow user={item} isOwner={item._id === user?._id && isCompanyOwner} />
   );
 
   const renderFooter = () => {
@@ -572,7 +574,7 @@ export default function Users() {
 
   const renderHeaderActions = () => (
     <View style={styles.headerActions}>
-      {user?._id === user?.companyOwnerId && (
+      {isCompanyOwner && (
         <Pressable
           style={styles.addButton}
           onPress={() => setShowAddUserModal(true)}

@@ -3,24 +3,24 @@ import { router } from 'expo-router';
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-    ActivityIndicator,
-    Alert,
-    Keyboard,
-    KeyboardAvoidingView,
-    Platform,
-    Pressable,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableWithoutFeedback,
-    View,
+  ActivityIndicator,
+  Alert,
+  Keyboard,
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableWithoutFeedback,
+  View,
 } from 'react-native';
 import Button from '../src/components/Button';
 import Input from '../src/components/Input';
 import { useAuth } from '../src/contexts/AuthContext';
 import '../src/i18n';
-import { colors } from '../src/theme/colors';
 import { useSignupWizard } from '../src/store/signupWizard';
+import { colors } from '../src/theme/colors';
 
 export default function Login() {
   const { t } = useTranslation();
@@ -48,18 +48,13 @@ export default function Login() {
     setEmailError('');
 
     try {
-      console.log('[Login] Attempting login for:', email);
       await login(email, password);
-      console.log('[Login] Success, navigating to tabs...');
       setNavigating(true);
       setTimeout(() => {
         router.replace('/(tabs)');
         setNavigating(false);
       }, 500);
     } catch (error: any) {
-      console.log('[Login] Error caught:', error);
-      console.log('[Login] Error code:', error.code);
-      console.log('[Login] Error message:', error.message);
       
       let errorMessage = t('login.errorMessage') || 'Login failed. Please try again.';
       

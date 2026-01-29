@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState, useCallback, useRef } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { getFirebaseAuth } from '../config/firebase';
 import feathersClient from '../services/feathersClient';
 
@@ -51,7 +51,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         setUser(null);
       }
     } catch (error) {
-      console.log('[Auth] No valid session found:', error);
       setUser(null);
     }
   }, []);
@@ -64,7 +63,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       try {
         await reauthenticate();
       } catch (error) {
-        console.log('[Auth] Initial reauth failed:', error);
       } finally {
         setIsLoading(false);
       }
@@ -103,7 +101,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     try {
       await feathersClient.logout();
     } catch (error) {
-      console.log('[Auth] Logout error:', error);
     } finally {
       setUser(null);
       setIsLoading(false);

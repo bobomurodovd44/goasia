@@ -289,9 +289,7 @@ function AddUserModal({
               <Ionicons name="chevron-back" size={24} color={colors.textPrimary} />
             </Pressable>
             <Text style={styles.modalTitle}>Add User</Text>
-            <Pressable style={styles.modalCloseButton} onPress={handleClose}>
-              <Ionicons name="close" size={24} color={colors.textPrimary} />
-            </Pressable>
+            <View style={styles.modalCloseButton} />
           </View>
 
           <KeyboardAvoidingView

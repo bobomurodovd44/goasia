@@ -148,16 +148,16 @@ function AddDriverModal({ visible, onClose, onSuccess }: AddDriverModalProps) {
   const pickImage = async (side: "front" | "back") => {
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true,
-      aspect: [4, 3],
+      allowsEditing: false,
       quality: 1,
     });
 
     if (!result.canceled && result.assets && result.assets.length > 0) {
+      const asset = result.assets[0];
       if (side === "front") {
-        setLicenseFront(result.assets[0].uri);
+        setLicenseFront(asset.uri);
       } else {
-        setLicenseBack(result.assets[0].uri);
+        setLicenseBack(asset.uri);
       }
     }
   };
@@ -446,6 +446,7 @@ export default function Drivers() {
   const [error, setError] = useState<string | null>(null);
   const [skip, setSkip] = useState(0);
   const [showAddDriverModal, setShowAddDriverModal] = useState(false);
+  const driversFetched = useRef(false);
 
   const fetchDrivers = useCallback(
     async (reset = false) => {
@@ -514,6 +515,12 @@ export default function Drivers() {
       return;
     }
 
+    // Prevent double fetch
+    if (driversFetched.current) {
+      return;
+    }
+
+    driversFetched.current = true;
     fetchDrivers(true);
   }, [user?.companyId, fetchDrivers]);
 

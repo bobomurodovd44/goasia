@@ -3,23 +3,43 @@ import { hashFileName } from './hashFileName';
 
 const CHUNK_SIZE = 5 * 1024 * 1024;
 
+function getMimeType(uri: string): string {
+  const ext = uri.split('.').pop()?.toLowerCase();
+  const mimeTypes: Record<string, string> = {
+    'jpg': 'image/jpeg',
+    'jpeg': 'image/jpeg',
+    'png': 'image/png',
+    'gif': 'image/gif',
+    'webp': 'image/webp',
+  };
+  return mimeTypes[ext || 'jpg'] || 'image/jpeg';
+}
+
+function getExtension(uri: string): string {
+  return uri.split('.').pop()?.toLowerCase() || 'jpg';
+}
+
 export async function uploadFileMultipart(
   uri: string,
   contentType: string,
   onProgress?: (progress: number) => void
 ): Promise<string | null> {
+  // Detect actual MIME type and extension from URI
+  const detectedMimeType = getMimeType(uri);
+  const extension = getExtension(uri);
+
   // 1. Fetch blob from URI
   const response = await fetch(uri);
   const blob = await response.blob();
   const fileSize = blob.size;
 
-  // 2. Hash filename
-  const filename = await hashFileName('image.jpg');
+  // 2. Hash filename with correct extension
+  const filename = await hashFileName(`image.${extension}`);
 
   // 3. Initialize multipart upload
   const initResponse = await feathersClient.service('uploads').create({
     key: filename,
-    contentType,
+    contentType: detectedMimeType,
   });
   const { uploadId, key } = initResponse;
 
@@ -33,7 +53,7 @@ export async function uploadFileMultipart(
     const chunk = blob.slice(start, end);
 
     const chunkData = await readChunkAsArrayBuffer(chunk);
-    const base64Content = arrayBufferToBase64(chunkData);
+    const base64Content = `data:${detectedMimeType};base64,${arrayBufferToBase64(chunkData)}`;
 
     const partResponse = await feathersClient.service('uploads').patch(null, {
       partNumber: i + 1,
@@ -51,7 +71,7 @@ export async function uploadFileMultipart(
     uploadId,
     key,
     parts,
-    fileType: contentType,
+    fileType: detectedMimeType,
   });
 
   return result as string;
